@@ -145,7 +145,7 @@ router.put('/profile', auth, async (req, res) => {
         _id: { $ne: req.user._id } 
       });
       if (existingUser) {
-        return res.status(400).json({ error: 'Email already taken' });
+        return res.status(400).json({ error: 'This email is already registered' });
       }
       updates.email = email;
     }
