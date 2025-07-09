@@ -115,15 +115,27 @@ class AIService {
   }
 
   async generateWithOpenAI(prompt, options) {
-    const { width, height, quality, style, numImages } = options;
+    const { width, height, numImages } = options;
 
+    // DALL-E 3 only supports certain sizes and parameters
+    const size = `${width}x${height}`;
+    const allowedSizes = ["1024x1024", "1792x1024", "1024x1792"];
+    const safeSize = allowedSizes.includes(size) ? size : "1024x1024";
+
+    // Log the request to OpenAI for debugging
+    console.log("OpenAI request:", {
+      model: "dall-e-3",
+      prompt,
+      n: numImages,
+      size: safeSize
+    });
+
+    // Only send supported parameters
     const response = await openai.images.generate({
       model: "dall-e-3",
       prompt: prompt,
       n: numImages,
-      size: `${width}x${height}`,
-      quality: quality,
-      style: style,
+      size: safeSize
     });
 
     return {

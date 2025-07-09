@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const Image = require('../models/Image');
-const { auth, checkCredits, deductCredits } = require('../middleware/auth');
+const { auth, checkCredits, deductCredits, optionalAuth } = require('../middleware/auth');
 const aiService = require('../services/aiService');
 
 const router = express.Router();
@@ -54,7 +54,8 @@ router.post('/generate', auth, checkCredits(1), deductCredits(1), async (req, re
       numImages = 1,
       title,
       description,
-      tags = []
+      tags = [],
+      isPublic
     } = req.body;
 
     if (!prompt) {
@@ -98,6 +99,7 @@ router.post('/generate', auth, checkCredits(1), deductCredits(1), async (req, re
           cost: result.metadata.cost
         },
         tags,
+        isPublic: (isPublic === false || isPublic === 'false') ? false : true,
         status: 'completed'
       });
 
@@ -124,7 +126,7 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No image file provided' });
     }
 
-    const { title, description, tags = [] } = req.body;
+    const { title, description, tags = [], isPublic } = req.body;
 
     // Upload to Cloudinary
     const result = await new Promise((resolve, reject) => {
@@ -185,10 +187,12 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
         format: result.format
       },
       tags,
+      isPublic: isPublic !== undefined ? (isPublic === 'true' || isPublic === true) : true,
       status: 'completed'
     });
 
     await image.save();
+    await image.populate('user', 'username');
 
     res.json({
       message: 'Image uploaded successfully',
@@ -319,14 +323,53 @@ router.get('/user/:userId', auth, async (req, res) => {
   }
 });
 
+// Like/unlike image
+router.post('/:id/like', auth, async (req, res) => {
+  try {
+    const image = await Image.findById(req.params.id);
+    
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    const likeIndex = image.likes.indexOf(req.user._id);
+    
+    if (likeIndex > -1) {
+      // Unlike
+      image.likes.splice(likeIndex, 1);
+    } else {
+      // Like
+      image.likes.push(req.user._id);
+    }
+
+    await image.save();
+
+    res.json({
+      message: likeIndex > -1 ? 'Image unliked' : 'Image liked',
+      likes: image.likes.length
+    });
+
+  } catch (error) {
+    console.error('Like image error:', error);
+    res.status(500).json({ error: 'Failed to like/unlike image' });
+  }
+});
+
 // Get single image
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const image = await Image.findById(req.params.id)
       .populate('user', 'username');
 
     if (!image) {
       return res.status(404).json({ error: 'Image not found' });
+    }
+
+    // If the image is not public, only the owner can view it
+    if (!image.isPublic) {
+      if (!req.user || String(image.user._id) !== String(req.user._id)) {
+        return res.status(403).json({ error: 'Not authorized to view this image' });
+      }
     }
 
     res.json({ image });
@@ -399,38 +442,6 @@ router.delete('/:id', auth, async (req, res) => {
   } catch (error) {
     console.error('Delete image error:', error);
     res.status(500).json({ error: 'Failed to delete image' });
-  }
-});
-
-// Like/unlike image
-router.post('/:id/like', auth, async (req, res) => {
-  try {
-    const image = await Image.findById(req.params.id);
-    
-    if (!image) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    const likeIndex = image.likes.indexOf(req.user._id);
-    
-    if (likeIndex > -1) {
-      // Unlike
-      image.likes.splice(likeIndex, 1);
-    } else {
-      // Like
-      image.likes.push(req.user._id);
-    }
-
-    await image.save();
-
-    res.json({
-      message: likeIndex > -1 ? 'Image unliked' : 'Image liked',
-      likes: image.likes.length
-    });
-
-  } catch (error) {
-    console.error('Like image error:', error);
-    res.status(500).json({ error: 'Failed to like/unlike image' });
   }
 });
 
