@@ -205,7 +205,7 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
   }
 });
 
-// Combine images
+// TODO: Check and test this combine images route for reliability and issues
 router.post('/combine', auth, async (req, res) => {
   try {
     const { imageIds, layout = 'grid', width = 1024, height = 1024, spacing = 10 } = req.body;
