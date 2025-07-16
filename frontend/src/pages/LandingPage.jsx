@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
+import Navbar from '../layouts/Navbar';
 
 const features = [
   {
@@ -71,28 +72,8 @@ const LandingPage = () => {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-[#111418] dark group/design-root overflow-x-hidden" style={{ fontFamily: 'Spline Sans, Noto Sans, sans-serif' }}>
+      <Navbar />
       <div className="layout-container flex h-full grow flex-col">
-        <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#283039] px-10 py-3">
-          <div className="flex items-center gap-4 text-white">
-            <div className="size-4">
-              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z" fill="currentColor"></path>
-              </svg>
-            </div>
-            <h2 className="text-white text-lg font-bold leading-tight tracking-[-0.015em]">VisualForge</h2>
-          </div>
-          <div className="flex flex-1 justify-end gap-8">
-            <div className="flex items-center gap-9">
-              <a className="text-white text-sm font-medium leading-normal" href="#">Features</a>
-              <a className="text-white text-sm font-medium leading-normal" href="#">Pricing</a>
-              <a className="text-white text-sm font-medium leading-normal" href="#">Examples</a>
-              <a className="text-white text-sm font-medium leading-normal" href="#">Help</a>
-            </div>
-            <Button onClick={handleStartGenerating} className="min-w-[84px] max-w-[480px] h-10 px-4 bg-[#0c7ff2] text-white text-sm font-bold leading-normal tracking-[0.015em]">
-              <span className="truncate">Start Generating</span>
-            </Button>
-          </div>
-        </header>
         <div className="px-40 flex flex-1 justify-center py-5">
           <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
             <div>
@@ -117,7 +98,22 @@ const LandingPage = () => {
               </div>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(258px,1fr))] gap-6 p-0">
                 {features.map((feature, idx) => (
-                  <Card key={idx} className="flex flex-1 flex-col gap-3 bg-[#1b2127] border-[#3b4754] p-4">
+                  <Card
+                    key={idx}
+                    className={
+                      'flex flex-1 flex-col gap-3 bg-[#1b2127] border-[#3b4754] p-4 cursor-pointer hover:shadow-lg hover:border-blue-500 transition-all'
+                    }
+                    onClick={idx === 0
+                      ? () => {
+                          const token = localStorage.getItem('token');
+                          if (token) {
+                            navigate('/generate');
+                          } else {
+                            navigate('/login', { state: { from: '/generate' } });
+                          }
+                        }
+                      : () => { /* future: handle card click */ }}
+                  >
                     <CardHeader className="p-0 pb-2 flex flex-row items-center gap-3">
                       <div className="text-white">{feature.icon}</div>
                       <CardTitle className="text-base font-bold leading-tight text-white m-0 p-0">{feature.title}</CardTitle>

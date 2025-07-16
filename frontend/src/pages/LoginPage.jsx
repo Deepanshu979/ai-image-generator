@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
+import Navbar from '../layouts/Navbar';
+import Toast from '../components/ui/toast';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showToast, setShowToast] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,10 +19,18 @@ const LoginPage = () => {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => setShowToast(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setShowToast(false);
     try {
       const res = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
@@ -32,34 +43,62 @@ const LoginPage = () => {
       navigate('/generate');
     } catch (err) {
       setError(err.message);
+      setShowToast(true);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#111418] text-white">
-      <form onSubmit={handleSubmit} className="bg-[#1b2127] p-8 rounded-xl shadow-md w-full max-w-sm flex flex-col gap-4 border border-[#283039]">
-        <h1 className="text-3xl font-bold mb-2 text-center">Login</h1>
-        <Input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-        />
-        <Input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
-        {error && <div className="text-red-400 text-sm text-center">{error}</div>}
-        <Button type="submit" className="w-full mt-2" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
-        </Button>
-      </form>
+    <div className="relative flex min-h-screen flex-col bg-[#121416] overflow-x-hidden" style={{ fontFamily: 'Spline Sans, Noto Sans, sans-serif' }}>
+      <Navbar />
+      <Toast message={error} show={showToast} onClose={() => setShowToast(false)} type="error" />
+      <div className="layout-container flex h-full grow flex-col">
+        <div className="px-40 flex flex-1 justify-center py-5">
+          <div className="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-[960px] flex-1">
+            <h2 className="text-white tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">Login to your account</h2>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-0 w-full max-w-[480px] mx-auto">
+              <div className="flex flex-wrap items-end gap-4 px-4 py-3">
+                <label className="flex flex-col min-w-40 flex-1">
+                  <p className="text-white text-base font-medium leading-normal pb-2">Email</p>
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-white focus:outline-0 focus:ring-0 border-none bg-[#2c3135] focus:border-none h-14 placeholder:text-[#a2abb3] p-4 text-base font-normal leading-normal"
+                  />
+                </label>
+              </div>
+              <div className="flex flex-wrap items-end gap-4 px-4 py-3">
+                <label className="flex flex-col min-w-40 flex-1">
+                  <p className="text-white text-base font-medium leading-normal pb-2">Password</p>
+                  <Input
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-white focus:outline-0 focus:ring-0 border-none bg-[#2c3135] focus:border-none h-14 placeholder:text-[#a2abb3] p-4 text-base font-normal leading-normal"
+                  />
+                </label>
+              </div>
+              <div className="flex px-4 py-3">
+                <Button type="submit" className="flex min-w-[84px] max-w-[480px] rounded-full h-12 px-5 flex-1 bg-[#dce8f3] text-[#121416] text-base font-bold leading-normal tracking-[0.015em]" disabled={loading}>
+                  <span className="truncate">{loading ? 'Logging in...' : 'Login'}</span>
+                </Button>
+              </div>
+            </form>
+            <div className="text-center text-sm mt-2 text-white">
+              Don&apos;t have an account?{' '}
+              <span className="text-blue-400 cursor-pointer underline" onClick={() => navigate('/register')}>
+                Register
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
