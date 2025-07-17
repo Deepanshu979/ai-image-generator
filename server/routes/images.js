@@ -65,7 +65,6 @@ router.post('/generate', auth, checkCredits(1), deductCredits(1), async (req, re
       model,
       width,
       height,
-      quality,
       style,
       numImages
     });
@@ -87,7 +86,6 @@ router.post('/generate', auth, checkCredits(1), deductCredits(1), async (req, re
         settings: {
           width,
           height,
-          quality,
           style
         },
         metadata: {
