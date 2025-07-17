@@ -46,11 +46,9 @@ router.post('/generate', auth, checkCredits(1), deductCredits(1), async (req, re
   try {
     const {
       prompt,
-      model = 'openai-dall-e-3',
-      width = 1024,
-      height = 1024,
-      quality = 'standard',
-      style = 'vivid',
+      model = 'stable-diffusion',
+      width = 512,
+      height = 512,
       numImages = 1,
       title,
       description,
