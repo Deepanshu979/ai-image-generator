@@ -33,8 +33,8 @@ const GeneratePage = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to generate image');
-      // Assume the backend returns { imageUrl: '...' }
-      setImages([data.imageUrl, ...images]);
+      // Use the first image's imageUrl from the images array
+      setImages([data.images[0].imageUrl, ...images]);
       setPrompt('');
     } catch (err) {
       setError(err.message);
