@@ -34,6 +34,7 @@ const LoginPage = () => {
     setError('');
     setShowToast(false);
     try {
+      console.log('API URL:', process.env.REACT_APP_API_URL);
       const res = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,6 +43,9 @@ const LoginPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Login failed');
       localStorage.setItem('token', data.token);
+      if (data.user && data.user._id) {
+        localStorage.setItem('userId', data.user._id);
+      }
       navigate('/generate');
     } catch (err) {
       setError(err.message);

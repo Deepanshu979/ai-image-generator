@@ -1,15 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../layouts/Navbar';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import Toast from '../components/ui/toast';
 
 const initialImages = [
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDCO5YfKRH_bcYAicD2RanCTC9WoLreDZtEOfvwrsHdNJ-K8H_CfudDgg7MgKekopC5D_Y8q8evwxgDp03gorZUhJ9OrtpxIoKP82WbyIl4x0S3owSy4t14UhtE9U7-yFZYcgGNOQ3ORE9x26ZhDxNZjcClE7T6R5ou83vFPq-tI2lWHp7I_pU5t9xkjm66bEQcIsCh4Vpc3VJr30Z5E8gdaqscTqaOBVasgfwdGRlXxmA2Kw2cXj7X0jkfDwOpbgqUEN7oldXvy_Uv",
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuA9l4Wv8v-GDVoFK7iVpvxSbhc-ef1pvt2iAE3yCBvva79281K5s1FKn43d1fsuNJ9d47U3lLR9tDi6h2QtfzDF46jX8tMvhQqFDcRRzJfcRZiuqtus55ug42B9Hb-zkqRQx9KQXvGFEh6XzfgJ7BsiOBYgKwjD6qxwq6d6JIC64x3YXlq3bUD-_oQZda2ErFOYh8fPEn3V_G-SBSLghk-048me0T25yi_btDmn0XCDzbN1YD5rLGjeHo2MJuKilxWeFaS1GH9cTzv5",
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAU-y9VxI0SKxb68BLZk_Wl5EsOC-RjIVSPp-oTj5z-1-hZvNOOB-iyXwZabFfSxLAjUToSdaq4RGsfE0V2Rt71RZgjEIM_XP9q9WsHjP7gMdI2YTFBTBMLp4v2vzy_UA8yBCdM0OC-Vl2zzTuGc77uB12tRE1UjIcxWkImVg8I6D80KW4Ab4ROSxtF3-Yol7aO94xm65mOqKX457oq4NuBVef8CvjZQiU_rnxDrwJ7bbBI23knyWWrV909YNOYST7EEzuRm8yjPudz",
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDMWsWFiHDf7Tnlj7nrn_E8rmi75SqCi8LTeRF0YZVAtbKPA4QwVwPeoi-nVd7nAHRXxgL_4u9I78Fc25DRsq6_c6t4ACnZbmJeJWSCmaILOeUyP7FDegGRQJeQ2Z0vidr2cZs8B9eQQ27ocFE_mtthzopkbe1k1kHQrqC6fiNVtIyrDjr2MMjnIcJjy0dsT4n5hts2TvOaXSuqjPSiNrGxwx-apApDY2ifx4DMIfuO_PaeJ0b0rPia7-3-VBVuoonO9iNl2uLT7msd",
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAacp7cBbhzqxx7-xrYr1746rH3lMMrja3LH7WfFm5mjbW1u3LULZOUSljvg5okATJ1dyzOTbhSM8CQjbaB2vM0v86lfXsiEX8K_d0x1uEXQzGFQAx324T8K5jfoOGy31lWxG0j0z1aPZMsiQhnU26_gH9OSdAPAkwUmqwiJMug75IXBnWxeLAfzRMFQQYLakJ-z0EPajKaS8v-BUKVrUK8o3xOGTP7Xtq-5gFsIt3xk-m6MaZVipjJQf83uyCJPqKuVRwRsUYtrEvz",
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuBFyzKDPuJ5E5u-BU2IDu7rO9CELE2LsBTmVbT3ECp35_aHXIxP0fjfgu9YJwM6IjzURPbEbZRbgBzGzj9fSKLa2iBQ2di3rXlQUCKfPDhTrtrTSEwSJrpWxR3ICyjVFVClZnNOF_vdNgPxgjJe1_edrP7ci0EZ6bnPrex3bcu1ZslTLlTJx6rD4IgPh0D2B5vGwDS9gETwKpUnrsgzGumLzEP2OEoFgyWZfKA6ZUodef1rbivXYnRShRQTunjAALPMpEeEpaNQjSuz"
+  // This will be replaced by fetched images on mount
 ];
 
 const GeneratePage = () => {
@@ -17,6 +13,35 @@ const GeneratePage = () => {
   const [images, setImages] = useState(initialImages);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showToast, setShowToast] = useState(false);
+
+  useEffect(() => {
+    const fetchImages = async () => {
+      const userId = localStorage.getItem('userId');
+      if (!userId) return;
+      try {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/user/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        const data = await res.json();
+        if (res.ok && data.images) {
+          setImages(data.images.map(img => img.imageUrl));
+        }
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    fetchImages();
+  }, []);
+
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => setShowToast(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -33,11 +58,11 @@ const GeneratePage = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to generate image');
-      // Use the first image's imageUrl from the images array
       setImages([data.images[0].imageUrl, ...images]);
       setPrompt('');
     } catch (err) {
       setError(err.message);
+      setShowToast(true);
     } finally {
       setLoading(false);
     }
@@ -46,6 +71,7 @@ const GeneratePage = () => {
   return (
     <div className="relative flex min-h-screen flex-col bg-[#111418] overflow-x-hidden" style={{ fontFamily: 'Spline Sans, Noto Sans, sans-serif' }}>
       <Navbar />
+      <Toast message={error} show={showToast} onClose={() => setShowToast(false)} type="error" />
       <div className="layout-container flex h-full grow flex-col">
         <div className="px-40 flex flex-1 justify-center py-5">
           <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
@@ -83,7 +109,6 @@ const GeneratePage = () => {
                 </Button>
               </div>
             </div>
-            {error && <div className="text-red-400 text-sm text-center pb-2">{error}</div>}
             <h2 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Generated Images</h2>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-3 p-4">
               {images.map((img, idx) => (
