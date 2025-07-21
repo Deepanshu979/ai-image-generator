@@ -3,17 +3,26 @@ import Navbar from '../layouts/Navbar';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import Toast from '../components/ui/toast';
+import { Download, Eye } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
-const initialImages = [
-  // This will be replaced by fetched images on mount
-];
+const initialImages = [];
 
 const GeneratePage = () => {
   const [prompt, setPrompt] = useState('');
-  const [images, setImages] = useState(initialImages);
+  const [images, setImages] = useState(initialImages); // now array of objects
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => setShowToast(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -27,7 +36,7 @@ const GeneratePage = () => {
         });
         const data = await res.json();
         if (res.ok && data.images) {
-          setImages(data.images.map(img => img.imageUrl));
+          setImages(data.images); // store full objects
         }
       } catch (err) {
         // Optionally handle error
@@ -35,13 +44,6 @@ const GeneratePage = () => {
     };
     fetchImages();
   }, []);
-
-  useEffect(() => {
-    if (showToast) {
-      const timer = setTimeout(() => setShowToast(false), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [showToast]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -58,13 +60,33 @@ const GeneratePage = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to generate image');
-      setImages([data.images[0].imageUrl, ...images]);
+      setImages([data.images[0], ...images]); // store full object
       setPrompt('');
     } catch (err) {
       setError(err.message);
       setShowToast(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Download handler
+  const handleDownload = async (url, filename = 'image.jpg', id) => {
+    setDownloadingId(id);
+    try {
+      const response = await fetch(url, { mode: 'cors' });
+      const blob = await response.blob();
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(link.href);
+    } catch (err) {
+      alert('Failed to download image.');
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -110,13 +132,47 @@ const GeneratePage = () => {
               </div>
             </div>
             <h2 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Generated Images</h2>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-3 p-4">
-              {images.map((img, idx) => (
-                <Card key={idx} className="flex flex-col gap-3">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3 p-4">
+              {images.map((imgObj, idx) => (
+                <Card
+                  key={imgObj._id || idx}
+                  className="relative flex flex-col gap-3 w-[220px] h-[220px] cursor-pointer group transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl"
+                  onClick={() => navigate(`/image/${imgObj._id}`)}
+                >
+                  <div className="w-full h-full flex items-center justify-center">
+                    <img
+                      src={imgObj.imageUrl}
+                      alt={`Generated ${idx}`}
+                      className="object-cover w-full h-full rounded-xl"
+                    />
+                  </div>
                   <div
-                    className="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl"
-                    style={{ backgroundImage: `url(${img})` }}
-                  ></div>
+                    className="absolute bottom-2 right-2 flex gap-2 z-10 items-center"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <span className="relative">
+                      <Download
+                        className={`w-5 h-5 text-white hover:text-blue-400 cursor-pointer ${downloadingId === imgObj._id ? 'opacity-50 pointer-events-none' : ''}`}
+                        onClick={() => {
+                          const promptPart = (imgObj.prompt || 'image').replace(/\s+/g, '-').substring(0, 10);
+                          const datePart = imgObj.createdAt ? new Date(imgObj.createdAt).toISOString().split('T')[0] : '';
+                          const filename = `${promptPart}-${datePart}-${imgObj._id}.jpg`;
+                          handleDownload(imgObj.imageUrl, filename, imgObj._id);
+                        }}
+                      />
+                      {downloadingId === imgObj._id && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <svg className="animate-spin h-5 w-5 text-blue-400" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                          </svg>
+                        </span>
+                      )}
+                    </span>
+                    <Link to={`/image/${imgObj._id}`} onClick={e => e.stopPropagation()}>
+                      <Eye className="w-5 h-5 text-white hover:text-blue-400 cursor-pointer" />
+                    </Link>
+                  </div>
                 </Card>
               ))}
             </div>

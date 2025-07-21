@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import GeneratePage from './pages/GeneratePage';
 import RequireAuth from './routes/RequireAuth';
+import ImageDetailPage from './pages/ImageDetailPage';
 
 function App() {
   return (
@@ -18,6 +19,14 @@ function App() {
           element={
             <RequireAuth>
               <GeneratePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/image/:id"
+          element={
+            <RequireAuth>
+              <ImageDetailPage />
             </RequireAuth>
           }
         />
