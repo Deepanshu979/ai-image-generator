@@ -6,6 +6,12 @@ const imageSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  username: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100
+  },
   title: {
     type: String,
     required: true,

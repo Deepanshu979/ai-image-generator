@@ -2,6 +2,10 @@ const OpenAI = require('openai');
 const Replicate = require('replicate');
 const sharp = require('sharp');
 const { v4: uuidv4 } = require('uuid');
+const https = require('https');
+const stream = require('stream');
+const { promisify } = require('util');
+const cloudinary = require('cloudinary').v2;
 
 // Initialize AI clients
 const openai = new OpenAI({
@@ -26,7 +30,7 @@ class AIService {
         name: 'Stable Diffusion',
         provider: 'replicate',
         model: 'stability-ai/stable-diffusion:db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf',
-        costPerImage: 0.01
+        costPerImage: 0.00001
       },
       'midjourney': {
         name: 'Midjourney',
@@ -319,6 +323,32 @@ class AIService {
 
     const result = await composite.composite(composites).png().toBuffer();
     return `data:image/png;base64,${result.toString('base64')}`;
+  }
+
+  /**
+   * Downloads an image from a URL and uploads it to Cloudinary.
+   * @param {string} imageUrl - The URL of the image to download.
+   * @param {object} [options] - Cloudinary upload options.
+   * @returns {Promise<string>} - The Cloudinary secure_url.
+   */
+  async uploadImageUrlToCloudinary(imageUrl, options = {}) {
+    const finished = promisify(stream.finished);
+    return new Promise((resolve, reject) => {
+      https.get(imageUrl, (response) => {
+        if (response.statusCode !== 200) {
+          return reject(new Error(`Failed to get image. Status code: ${response.statusCode}`));
+        }
+        const uploadStream = cloudinary.uploader.upload_stream(
+          options,
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result.secure_url);
+          }
+        );
+        response.pipe(uploadStream);
+        finished(uploadStream).catch(reject);
+      }).on('error', reject);
+    });
   }
 
   getAvailableModels() {

@@ -75,12 +75,28 @@ router.post('/generate', auth, checkCredits(1), deductCredits(1), async (req, re
     // Save images to database
     const savedImages = [];
     for (const imageData of result.images) {
+      // Download from provider and upload to Cloudinary
+      let cloudinaryUrl;
+      try {
+        cloudinaryUrl = await aiService.uploadImageUrlToCloudinary(imageData.url, {
+          folder: 'ai-generator',
+          resource_type: 'image',
+          transformation: [
+            { quality: 'auto' },
+            { fetch_format: 'auto' }
+          ]
+        });
+      } catch (err) {
+        console.error('Cloudinary upload failed:', err);
+        continue; // skip this image
+      }
       const image = new Image({
         user: req.user._id,
+        username: req.user.username,
         title: title || `Generated: ${prompt.substring(0, 50)}...`,
         description: description || '',
         prompt,
-        imageUrl: imageData.url,
+        imageUrl: cloudinaryUrl,
         model,
         settings: {
           width,
@@ -96,7 +112,6 @@ router.post('/generate', auth, checkCredits(1), deductCredits(1), async (req, re
         isPublic: (isPublic === false || isPublic === 'false') ? false : true,
         status: 'completed'
       });
-
       await image.save();
       savedImages.push(image);
     }
@@ -166,6 +181,7 @@ router.post('/upload', auth, upload.single('image'), async (req, res) => {
     // Save to database
     const image = new Image({
       user: req.user._id,
+      username: req.user.username,
       title: title || 'Uploaded Image',
       description: description || '',
       prompt: 'Uploaded image',
@@ -251,6 +267,7 @@ router.post('/combine', auth, async (req, res) => {
     // Save combined image
     const combinedImage = new Image({
       user: req.user._id,
+      username: req.user.username,
       title: `Combined Image (${layout})`,
       description: `Combined ${images.length} images using ${layout} layout`,
       prompt: 'Combined images',
