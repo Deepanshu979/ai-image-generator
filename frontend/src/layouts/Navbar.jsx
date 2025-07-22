@@ -6,6 +6,8 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAuthenticated = Boolean(localStorage.getItem('token'));
+  const [activeNav, setActiveNav] = React.useState(location.pathname);
+  const [navAnimating, setNavAnimating] = React.useState('');
 
   const handleAuthAction = () => {
     if (isAuthenticated) {
@@ -14,6 +16,15 @@ const Navbar = () => {
     } else {
       navigate('/login');
     }
+  };
+
+  const handleNavClick = (path) => {
+    setNavAnimating(path);
+    setTimeout(() => {
+      setActiveNav(path);
+      setNavAnimating('');
+      navigate(path);
+    }, 250); // 250ms animation
   };
 
   return (
@@ -29,10 +40,22 @@ const Navbar = () => {
       </div>
       <div className="flex flex-1 justify-end gap-8">
         <div className="flex items-center gap-9">
-          <a className="text-white text-sm font-medium leading-normal" href="#">Home</a>
-          <a className="text-white text-sm font-medium leading-normal" href="#">Features</a>
-          <a className="text-white text-sm font-medium leading-normal" href="#">Pricing</a>
-          <a className="text-white text-sm font-medium leading-normal" href="#">Contact</a>
+          <span
+            className={`text-white text-sm font-medium leading-normal cursor-pointer transition-all duration-250 ${activeNav === '/' ? 'font-bold' : ''} ${navAnimating === '/' ? 'scale-110 text-blue-400' : ''}`}
+            onClick={() => handleNavClick('/')}
+          >Home</span>
+          <span
+            className={`text-white text-sm font-medium leading-normal cursor-pointer transition-all duration-250 ${activeNav === '/features' ? 'font-bold' : ''} ${navAnimating === '/features' ? 'scale-110 text-blue-400' : ''}`}
+            onClick={() => handleNavClick('/features')}
+          >Features</span>
+          <span
+            className={`text-white text-sm font-medium leading-normal cursor-pointer transition-all duration-250 ${activeNav === '/pricing' ? 'font-bold' : ''} ${navAnimating === '/pricing' ? 'scale-110 text-blue-400' : ''}`}
+            onClick={() => handleNavClick('/pricing')}
+          >Pricing</span>
+          <span
+            className={`text-white text-sm font-medium leading-normal cursor-pointer transition-all duration-250 ${activeNav === '/contact' ? 'font-bold' : ''} ${navAnimating === '/contact' ? 'scale-110 text-blue-400' : ''}`}
+            onClick={() => handleNavClick('/contact')}
+          >Contact</span>
         </div>
         <Button
           className="flex min-w-[84px] max-w-[480px] rounded-full h-10 px-4 bg-[#2c3135] text-white text-sm font-bold leading-normal tracking-[0.015em]"

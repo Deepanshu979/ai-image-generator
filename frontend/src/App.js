@@ -6,6 +6,9 @@ import RegisterPage from './pages/RegisterPage';
 import GeneratePage from './pages/GeneratePage';
 import RequireAuth from './routes/RequireAuth';
 import ImageDetailPage from './pages/ImageDetailPage';
+import FeaturesPage from './pages/FeaturesPage';
+import PricingPage from './pages/PricingPage';
+import ContactPage from './pages/ContactPage';
 
 function App() {
   return (
@@ -30,6 +33,9 @@ function App() {
             </RequireAuth>
           }
         />
+        <Route path="/features" element={<FeaturesPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Routes>
     </Router>
   );
