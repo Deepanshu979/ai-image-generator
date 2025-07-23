@@ -2,7 +2,7 @@ import React from 'react';
 import Navbar from '../layouts/Navbar';
 
 const ContactPage = () => (
-  <div className="min-h-screen bg-[#111418]">
+  <div className="relative flex min-h-screen flex-col bg-[#101923] overflow-x-hidden">
     <Navbar />
     <div className="flex flex-col items-center justify-center py-20">
       <h1 className="text-3xl font-bold text-white mb-4">Contact</h1>

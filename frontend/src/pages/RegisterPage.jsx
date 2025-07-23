@@ -74,7 +74,7 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-[#121416] overflow-x-hidden" style={{ fontFamily: 'Spline Sans, Noto Sans, sans-serif' }}>
+    <div className="relative flex min-h-screen flex-col bg-[#101923] overflow-x-hidden" style={{ fontFamily: 'Spline Sans, Noto Sans, sans-serif' }}>
       <Navbar />
       <Toast message={success} show={showToast} onClose={() => setShowToast(false)} type="success" />
       <div className="layout-container flex h-full grow flex-col">

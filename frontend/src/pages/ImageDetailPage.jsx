@@ -72,10 +72,10 @@ const ImageDetailPage = () => {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-[#111418] overflow-x-hidden" style={{ fontFamily: 'Spline Sans, Noto Sans, sans-serif' }}>
+    <div className="relative flex min-h-screen flex-col bg-[#101923] overflow-x-hidden" style={{ fontFamily: 'Spline Sans, Noto Sans, sans-serif' }}>
       <Navbar />
       <Toast message={error} show={showToast} onClose={() => setShowToast(false)} type="error" />
-      <div className="flex flex-col items-center min-h-screen bg-[#111418] py-8 px-2">
+      <div className="flex flex-col items-center py-8 px-2">
         <div className="w-full max-w-2xl flex flex-col gap-6">
           {/* Back Button */}
           <Button variant="ghost" className="self-start mb-2 text-white" onClick={() => navigate(-1)}>
