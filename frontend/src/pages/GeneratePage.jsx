@@ -3,13 +3,15 @@ import Navbar from '../layouts/Navbar';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import Toast from '../components/ui/toast';
-import { Download, Eye } from 'lucide-react';
+import { Download, Eye, Upload } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const initialImages = [];
 
 const GeneratePage = () => {
   const [prompt, setPrompt] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [images, setImages] = useState(initialImages); // now array of objects
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -68,22 +70,61 @@ const GeneratePage = () => {
     };
   }, [loading]);
 
+  // Handle image file selection and preview
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setImageFile(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result);
+      reader.readAsDataURL(file);
+    } else {
+      setImagePreview(null);
+    }
+  };
+
+  // Unified generate handler
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ prompt }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to generate image');
-      setImages([data.images[0], ...images]); // store full object
+      let newImage = null;
+      if (imageFile) {
+        // Image-to-Image
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        formData.append('prompt', prompt);
+        // Optionally add guidance, speed_mode, title, description, etc.
+        // formData.append('guidance', '2.5');
+        // formData.append('speed_mode', 'Real Time');
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/upload`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to generate image');
+        newImage = data.image;
+        setImageFile(null);
+        setImagePreview(null);
+      } else {
+        // Text-to-Image
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ prompt }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to generate image');
+        newImage = data.images[0];
+      }
+      setImages([newImage, ...images]);
       setPrompt('');
     } catch (err) {
       setError(err.message);
@@ -93,7 +134,7 @@ const GeneratePage = () => {
     }
   };
 
-  // Download handler
+  // Download handler (unchanged)
   const handleDownload = async (url, filename = 'image.jpg', id) => {
     setDownloadingId(id);
     try {
@@ -122,8 +163,14 @@ const GeneratePage = () => {
           <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
             <div className="flex flex-wrap justify-between gap-3 p-4">
               <div className="flex min-w-72 flex-col gap-3">
-                <p className="text-white tracking-light text-[32px] font-bold leading-tight">Generate Images</p>
-                <p className="text-[#9cabba] text-sm font-normal leading-normal">Describe the image you want to create, or upload an image to use as a starting point.</p>
+                <p className="text-white tracking-light text-[32px] font-bold leading-tight">
+                  {imageFile ? 'Image-to-Image Generation' : 'Text-to-Image Generation'}
+                </p>
+                <p className="text-[#9cabba] text-sm font-normal leading-normal">
+                  {imageFile
+                    ? 'Upload an image and enter a prompt to generate a new image using AI.'
+                    : 'Enter a prompt to generate a new image using AI.'}
+                </p>
               </div>
             </div>
             <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
@@ -137,19 +184,29 @@ const GeneratePage = () => {
                 />
               </label>
             </div>
+            <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+              <label className="flex flex-col min-w-40 flex-1">
+                <span className="text-white text-sm mb-2">Upload Image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  disabled={loading}
+                  className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#283039] file:text-white hover:file:bg-[#314c68]"
+                />
+                {imagePreview && (
+                  <img src={imagePreview} alt="Preview" className="mt-2 rounded-xl max-h-40 object-contain border border-[#314c68]" />
+                )}
+              </label>
+            </div>
             <div className="flex justify-stretch">
               <div className="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-start">
-                <button
-                  className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#283039] text-white text-sm font-bold leading-normal tracking-[0.015em]"
-                  disabled={loading}
-                >
-                  <span className="truncate">Upload Image</span>
-                </button>
                 <Button
-                  className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#0c7ff2] text-white text-sm font-bold leading-normal tracking-[0.015em]"
+                  className="flex min-w-[120px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#0c7ff2] text-white text-sm font-bold leading-normal tracking-[0.015em]"
                   onClick={handleGenerate}
                   disabled={loading || !prompt.trim()}
                 >
+                  <Upload className="w-4 h-4 mr-2" />
                   <span className="truncate">{loading ? 'Generating...' : 'Generate'}</span>
                 </Button>
               </div>
