@@ -129,7 +129,7 @@ router.post('/generate', auth, checkCredits(1), deductCredits(1), async (req, re
 });
 
 // Upload image (now always image-to-image generation)
-router.post('/upload', auth, upload.single('image'), async (req, res) => {
+router.post('/upload', auth, checkCredits(1), deductCredits(1), upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
