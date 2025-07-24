@@ -128,90 +128,55 @@ router.post('/generate', auth, checkCredits(1), deductCredits(1), async (req, re
   }
 });
 
-// Upload image
+// Upload image (now always image-to-image generation)
 router.post('/upload', auth, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
     }
+    const { prompt, guidance = 2.5, speed_mode = 'Real Time', title, description, tags = [], isPublic } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required for image-to-image generation.' });
+    }
 
-    const { title, description, tags = [], isPublic } = req.body;
-
-    // Upload to Cloudinary
-    const result = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'ai-generator',
-          resource_type: 'image',
-          transformation: [
-            { quality: 'auto' },
-            { fetch_format: 'auto' }
-          ]
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-
-      uploadStream.end(req.file.buffer);
+    // 1. Call your AI service for image-to-image
+    const result = await aiService.imageToImage({
+      imageBuffer: req.file.buffer,
+      prompt,
+      guidance: parseFloat(guidance),
+      speed_mode
     });
 
-    // Create thumbnail
-    const thumbnailResult = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'ai-generator/thumbnails',
-          resource_type: 'image',
-          transformation: [
-            { width: 300, height: 300, crop: 'fill' },
-            { quality: 'auto' },
-            { fetch_format: 'auto' }
-          ]
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
+    if (!result.success) return res.status(500).json({ error: result.error });
 
-      uploadStream.end(req.file.buffer);
+    // 2. Upload generated image to Cloudinary
+    const cloudinaryUrl = await aiService.uploadImageUrlToCloudinary(result.imageUrl, {
+      folder: 'ai-generator',
+      resource_type: 'image'
     });
 
-    // Save to database
+    // 3. Save generated image to DB
     const image = new Image({
       user: req.user._id,
       username: req.user.username,
-      title: title || 'Uploaded Image',
+      title: title || 'Image-to-Image Result',
       description: description || '',
-      prompt: 'Uploaded image',
-      imageUrl: result.secure_url,
-      thumbnailUrl: thumbnailResult.secure_url,
-      model: 'upload',
-      settings: {
-        width: result.width,
-        height: result.height
-      },
-      metadata: {
-        fileSize: result.bytes,
-        format: result.format
-      },
+      prompt,
+      imageUrl: cloudinaryUrl,
+      model: 'flux',
+      settings: {},
       tags,
       isPublic: isPublic !== undefined ? (isPublic === 'true' || isPublic === true) : true,
       status: 'completed'
     });
-
     await image.save();
     await image.populate('user', 'username');
 
-    res.json({
-      message: 'Image uploaded successfully',
-      image
-    });
+    return res.json({ message: 'Image generated', image });
 
   } catch (error) {
-    console.error('Image upload error:', error);
-    res.status(500).json({ error: 'Failed to upload image' });
+    console.error('Image-to-Image upload error:', error);
+    res.status(500).json({ error: 'Failed to generate image' });
   }
 });
 

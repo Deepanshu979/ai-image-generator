@@ -38,7 +38,7 @@ const imageSchema = new mongoose.Schema({
   model: {
     type: String,
     required: true,
-    enum: ['openai-dall-e-3', 'stable-diffusion', 'midjourney', 'custom', 'upload']
+    enum: ['openai-dall-e-3', 'stable-diffusion', 'midjourney', 'custom', 'upload', 'flux']
   },
   settings: {
     width: {

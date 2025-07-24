@@ -351,6 +351,68 @@ class AIService {
     });
   }
 
+  /**
+   * Image-to-Image generation using Replicate prunaai/flux-kontext-dev
+   * @param {Object} params
+   * @param {Buffer} params.imageBuffer - The input image buffer
+   * @param {string} params.prompt - The prompt for the model
+   * @param {number} [params.guidance] - Guidance scale
+   * @param {string} [params.speed_mode] - Speed mode
+   * @returns {Promise<{success: boolean, imageUrl?: string, error?: string}>}
+   */
+  async imageToImage({ imageBuffer, prompt, guidance = 2.5, speed_mode = 'Real Time' }) {
+    try {
+      // 1. Upload the input image to Cloudinary (temporary, not saved in DB)
+      const tempUrl = await cloudinary.uploader.upload_stream_promise
+        ? await cloudinary.uploader.upload_stream_promise({
+            folder: 'ai-generator/temp',
+            resource_type: 'image',
+            transformation: [
+              { quality: 'auto' },
+              { fetch_format: 'auto' }
+            ]
+          }, imageBuffer)
+        : await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              {
+                folder: 'ai-generator/temp',
+                resource_type: 'image',
+                transformation: [
+                  { quality: 'auto' },
+                  { fetch_format: 'auto' }
+                ]
+              },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            );
+            stream.Readable.from(imageBuffer).pipe(uploadStream);
+          });
+      const img_cond_path = tempUrl.secure_url;
+
+      // 2. Call Replicate with the prunaai/flux-kontext-dev model
+      const output = await replicate.run(
+        "prunaai/flux-kontext-dev:2f311ad6069d6cb2ec28d46bb0d1da5148a983b56f4f2643d2d775d39d11e44b",
+        {
+          input: {
+            prompt,
+            guidance,
+            speed_mode,
+            img_cond_path
+          }
+        }
+      );
+
+      // output is usually an array of URLs, take the first
+      const imageUrl = Array.isArray(output) ? output[0] : output;
+      return { success: true, imageUrl };
+    } catch (error) {
+      console.error('Image-to-Image Replicate error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   getAvailableModels() {
     return Object.keys(this.models).map(key => ({
       id: key,
