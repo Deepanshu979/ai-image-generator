@@ -170,36 +170,29 @@ const LandingPage = () => {
     <div className="bg-[#101923] min-h-screen flex flex-col">
       <Navbar />
       {/* Hero Section */}
-      <section className="px-4 md:px-40 flex flex-1 justify-center py-5">
-        <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+      <section className="px-2 sm:px-4 md:px-10 lg:px-40 flex flex-1 justify-center py-3 md:py-5">
+        <div className="layout-content-container flex flex-col w-full max-w-[960px] flex-1">
           {/* Hero */}
-          <div className="@container">
-            <div className="@[480px]:p-4">
-              <div
-                className="flex min-h-[480px] flex-col gap-6 bg-cover bg-center bg-no-repeat @[480px]:gap-8 @[480px]:rounded-xl items-center justify-center p-4"
-                style={{ backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuDIi8L00tU24poC_snAKyxFl_Z9zzhW9dnCwANTGf6sc-FufNRbDWxqEfASUQk3ngoJ1ikOHT5z7umdEB-5fjXjzdGFTNHtUssIzyM085uyWLnytu7VJoYG7rTRECkjYBWtaTq7VdqyB5rsrzQgVKzVjug8T0jj5SDa0hB_v8nzQz9gSxBu6VTR6NOvgG8uXf26gKM9YGTMhx7dfPxOGVTqGPpVcE4J2Hd9XEGOMR1qFPILzdz6ceD7Se6TgSZz-f_rd-V8ze52g0Sc')` }}
-              >
-                <div className="flex flex-col gap-2 text-center">
-                  <h1 className="text-white text-4xl font-black leading-tight tracking-[-0.033em] @[480px]:text-5xl @[480px]:font-black @[480px]:leading-tight @[480px]:tracking-[-0.033em]">
-                    Unleash Your Creativity with Visionary AI
-                  </h1>
-                  <h2 className="text-white text-sm font-normal leading-normal @[480px]:text-base @[480px]:font-normal @[480px]:leading-normal">
-                    Generate stunning images and videos with the power of artificial intelligence. Transform your ideas into visual masterpieces in seconds.
-                  </h2>
-                </div>
-                <Button
-                  className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 @[480px]:h-12 @[480px]:px-5 bg-[#3490f3] text-white text-sm font-bold leading-normal tracking-[0.015em] @[480px]:text-base @[480px]:font-bold @[480px]:leading-normal @[480px]:tracking-[0.015em]"
-                  onClick={() => navigate('/generate')}
-                >
-                  <span className="truncate">Start Creating</span>
-                </Button>
-              </div>
+          <div className="w-full flex flex-col gap-4 md:gap-8 items-center justify-center min-h-[320px] md:min-h-[480px] bg-cover bg-center bg-no-repeat rounded-xl p-2 md:p-4" style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 100%), url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80')` }}>
+            <div className="flex flex-col gap-2 text-center w-full max-w-2xl mx-auto">
+              <h1 className="text-white text-2xl sm:text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">
+                Unleash Your Creativity with Visionary AI
+              </h1>
+              <h2 className="text-white text-xs sm:text-sm md:text-base font-normal leading-normal">
+                Generate stunning images and videos with the power of artificial intelligence. Transform your ideas into visual masterpieces in seconds.
+              </h2>
             </div>
+            <Button
+              className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 md:h-12 px-4 md:px-5 bg-[#3490f3] text-white text-xs sm:text-sm md:text-base font-bold leading-normal tracking-[0.015em]"
+              onClick={() => navigate('/generate')}
+            >
+              <span className="truncate">Start Creating</span>
+            </Button>
           </div>
 
           {/* Features Section */}
           <h2 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Explore the Possibility</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-4 py-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 px-2 md:px-4 py-6 md:py-10">
             {features.map((f, i) => (
               <div
                 key={i}
@@ -220,7 +213,7 @@ const LandingPage = () => {
 
           {/* How It Works Section */}
           <h2 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">How It Works</h2>
-          <div className="grid grid-cols-[40px_1fr] gap-x-2 px-4">
+          <div className="grid grid-cols-[32px_1fr] md:grid-cols-[40px_1fr] gap-x-2 px-2 md:px-4">
             {howItWorks.map((step, i) => (
               <React.Fragment key={i}>
                 <div className="flex flex-col items-center gap-1 pt-3">
@@ -252,13 +245,13 @@ const LandingPage = () => {
             </button>
             <div
               ref={galleryRef}
-              className="w-full min-w-0 flex items-stretch gap-8 p-4 overflow-x-auto scroll-smooth hide-scrollbar snap-x snap-mandatory"
+              className="flex items-stretch gap-4 md:gap-8 p-2 md:p-4 overflow-x-auto scroll-smooth hide-scrollbar snap-x snap-mandatory"
               style={{ scrollBehavior: 'smooth' }}
             >
               {[...gallery, ...gallery].map((item, i) => (
                 <div
                   key={i}
-                  className="min-w-[420px] max-w-[480px] cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95 snap-center"
+                  className="min-w-[260px] sm:min-w-[340px] md:min-w-[420px] max-w-[480px] cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95 snap-center"
                   tabIndex={0}
                 >
                   <Card className="flex h-full flex-1 flex-col gap-4 rounded-2xl bg-[#1a2330] shadow-2xl border-2 border-[#314c68]">
@@ -293,13 +286,13 @@ const LandingPage = () => {
             <div className="pointer-events-none absolute right-0 top-0 h-full w-16 z-10" style={{background: 'linear-gradient(-90deg, #101923 80%, transparent)'}} />
             <div
               ref={testimonialsRef}
-              className="w-full min-w-0 flex items-stretch gap-8 p-4 overflow-x-auto scroll-smooth hide-scrollbar snap-x snap-mandatory"
+              className="flex items-stretch gap-4 md:gap-8 p-2 md:p-4 overflow-x-auto scroll-smooth hide-scrollbar snap-x snap-mandatory"
               style={{ scrollBehavior: 'smooth' }}
             >
               {[...testimonials, ...testimonials].map((item, i) => (
                 <div
                   key={i}
-                  className="min-w-[340px] max-w-[400px] cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95 snap-center"
+                  className="min-w-[220px] sm:min-w-[280px] md:min-w-[340px] max-w-[400px] cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95 snap-center"
                   tabIndex={0}
                 >
                   <Card className="flex h-full flex-1 flex-col gap-4 rounded-2xl bg-[#1a2330] shadow-2xl border-2 border-[#314c68] items-center p-6">
@@ -318,7 +311,7 @@ const LandingPage = () => {
           </div>
 
           {/* Final CTA Section */}
-          <div className="flex flex-col justify-center items-center gap-6 px-4 py-10">
+          <div className="flex flex-col justify-center items-center gap-4 md:gap-6 px-2 md:px-4 py-6 md:py-10">
             <h1 className="text-white tracking-light text-[32px] font-bold leading-tight text-center max-w-[720px]">
               Ready to Bring Your Ideas to Life?
             </h1>
@@ -331,7 +324,7 @@ const LandingPage = () => {
           </div>
 
           {/* Footer */}
-          <footer className="flex flex-col gap-6 px-5 py-10 text-center">
+          <footer className="flex flex-col gap-4 md:gap-6 px-2 md:px-5 py-6 md:py-10 text-center">
             <div className="flex flex-wrap items-center justify-center gap-6">
               <a className="text-[#90accb] text-base font-normal leading-normal min-w-40" href="#">Terms of Service</a>
               <a className="text-[#90accb] text-base font-normal leading-normal min-w-40" href="#">Privacy Policy</a>
