@@ -78,12 +78,12 @@ const RegisterPage = () => {
       <Navbar />
       <Toast message={success} show={showToast} onClose={() => setShowToast(false)} type="success" />
       <div className="layout-container flex h-full grow flex-col">
-        <div className="px-40 flex flex-1 justify-center py-5">
-          <div className="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-[960px] flex-1">
-            <h2 className="text-white tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">Create your account</h2>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-0 w-full max-w-[480px] mx-auto">
-              <div className="flex flex-wrap items-end gap-4 px-4 py-3">
-                <label className="flex flex-col min-w-40 flex-1">
+        <div className="px-2 sm:px-4 md:px-10 flex flex-1 justify-center py-3 md:py-5">
+          <div className="layout-content-container flex flex-col w-full max-w-[400px] md:max-w-[512px] py-4 md:py-5 flex-1">
+            <h2 className="text-white tracking-light text-xl sm:text-2xl md:text-[28px] font-bold leading-tight px-2 md:px-4 text-center pb-2 md:pb-3 pt-4 md:pt-5">Create your account</h2>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-0 w-full max-w-[360px] md:max-w-[480px] mx-auto">
+              <div className="flex flex-col gap-2 px-2 md:px-4 py-2 md:py-3">
+                <label className="flex flex-col min-w-0 flex-1">
                   <p className="text-white text-base font-medium leading-normal pb-2">Username</p>
                   <div className="relative flex items-center">
                     <Input
@@ -98,8 +98,8 @@ const RegisterPage = () => {
                   </div>
                 </label>
               </div>
-              <div className="flex flex-wrap items-end gap-4 px-4 py-3">
-                <label className="flex flex-col min-w-40 flex-1">
+              <div className="flex flex-col gap-2 px-2 md:px-4 py-2 md:py-3">
+                <label className="flex flex-col min-w-0 flex-1">
                   <p className="text-white text-base font-medium leading-normal pb-2">Email</p>
                   <div className="relative flex items-center">
                     <Input
@@ -114,8 +114,8 @@ const RegisterPage = () => {
                   </div>
                 </label>
               </div>
-              <div className="flex flex-wrap items-end gap-4 px-4 py-3">
-                <label className="flex flex-col min-w-40 flex-1">
+              <div className="flex flex-col gap-2 px-2 md:px-4 py-2 md:py-3">
+                <label className="flex flex-col min-w-0 flex-1">
                   <p className="text-white text-base font-medium leading-normal pb-2">Password</p>
                   <div className="relative flex items-center">
                     <Input
@@ -141,8 +141,8 @@ const RegisterPage = () => {
                   </div>
                 </label>
               </div>
-              <div className="flex flex-wrap items-end gap-4 px-4 py-3">
-                <label className="flex flex-col min-w-40 flex-1">
+              <div className="flex flex-col gap-2 px-2 md:px-4 py-2 md:py-3">
+                <label className="flex flex-col min-w-0 flex-1">
                   <p className="text-white text-base font-medium leading-normal pb-2">Confirm password</p>
                   <div className="relative flex items-center">
                     <Input
@@ -169,14 +169,14 @@ const RegisterPage = () => {
                 </label>
               </div>
               {error && <div className="text-red-400 text-sm text-center pb-2">{error}</div>}
-              <div className="flex px-4 py-3">
-                <Button type="submit" className="flex min-w-[84px] max-w-[480px] rounded-full h-12 px-5 flex-1 bg-[#dce8f3] text-[#121416] text-base font-bold leading-normal tracking-[0.015em]">
+              <div className="flex px-2 md:px-4 py-2 md:py-3">
+                <Button type="submit" className="flex min-w-[84px] max-w-[480px] rounded-full h-10 md:h-12 px-4 md:px-5 flex-1 bg-[#dce8f3] text-[#121416] text-sm md:text-base font-bold leading-normal tracking-[0.015em]">
                   <span className="truncate">{loading ? 'Registering...' : 'Sign up'}</span>
                 </Button>
               </div>
             </form>
-            <p className="text-[#a2abb3] text-sm font-normal leading-normal pb-3 pt-1 px-4 text-center">By signing up, you agree to our Terms of Service and Privacy Policy.</p>
-            <div className="text-center text-sm mt-2 text-white">
+            <p className="text-[#a2abb3] text-xs sm:text-sm font-normal leading-normal pb-2 md:pb-3 pt-1 px-2 md:px-4 text-center">By signing up, you agree to our Terms of Service and Privacy Policy.</p>
+            <div className="text-center text-xs sm:text-sm mt-2 text-white">
               Already have an account?{' '}
               <span className="text-blue-400 cursor-pointer underline" onClick={() => navigate('/login')}>
                 Login
