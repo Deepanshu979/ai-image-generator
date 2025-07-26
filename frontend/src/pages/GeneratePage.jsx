@@ -20,6 +20,8 @@ const GeneratePage = () => {
   const navigate = useNavigate();
   const [showLoader, setShowLoader] = useState(false);
   const loaderTimeout = useRef(null);
+  const [fetchError, setFetchError] = useState('');
+  const [isFetching, setIsFetching] = useState(false);
 
   useEffect(() => {
     if (showToast) {
@@ -28,12 +30,21 @@ const GeneratePage = () => {
     }
   }, [showToast]);
 
+  // Show toast for fetch errors
+  useEffect(() => {
+    if (fetchError) {
+      setError(fetchError);
+      setShowToast(true);
+    }
+  }, [fetchError]);
+
   useEffect(() => {
     const fetchImages = async () => {
-      setLoading(true);
+      setIsFetching(true);
+      setFetchError('');
       const userId = localStorage.getItem('userId');
       if (!userId) {
-        setLoading(false);
+        setIsFetching(false);
         return;
       }
       try {
@@ -42,18 +53,99 @@ const GeneratePage = () => {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         });
-        const data = await res.json();
-        if (res.ok && data.images) {
+
+        let data;
+        try {
+          data = await res.json();
+        } catch (parseError) {
+          if (!res.ok) {
+            throw new Error('Server error. Please try again later.');
+          } else {
+            throw new Error('Invalid response from server.');
+          }
+        }
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            throw new Error('Please log in again to continue.');
+          } else if (res.status === 403) {
+            throw new Error('You do not have permission to view these images.');
+          } else if (res.status === 404) {
+            throw new Error('User images not found.');
+          } else {
+            throw new Error(data.error || 'Failed to fetch images. Please try again.');
+          }
+        }
+
+        if (data.images) {
           setImages(data.images); // store full objects
+        } else {
+          setImages([]); // set empty array if no images
         }
       } catch (err) {
-        // Optionally handle error
+        setFetchError(err.message);
+        console.error('Fetch images error:', err);
       } finally {
-        setLoading(false);
+        setIsFetching(false);
       }
     };
     fetchImages();
   }, []);
+
+  // Retry function for fetching images
+  const handleRetryFetch = () => {
+    const fetchImages = async () => {
+      setIsFetching(true);
+      setFetchError('');
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        setIsFetching(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/user/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+
+        let data;
+        try {
+          data = await res.json();
+        } catch (parseError) {
+          if (!res.ok) {
+            throw new Error('Server error. Please try again later.');
+          } else {
+            throw new Error('Invalid response from server.');
+          }
+        }
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            throw new Error('Please log in again to continue.');
+          } else if (res.status === 403) {
+            throw new Error('You do not have permission to view these images.');
+          } else if (res.status === 404) {
+            throw new Error('User images not found.');
+          } else {
+            throw new Error(data.error || 'Failed to fetch images. Please try again.');
+          }
+        }
+
+        if (data.images) {
+          setImages(data.images);
+        } else {
+          setImages([]);
+        }
+      } catch (err) {
+        setFetchError(err.message);
+        console.error('Retry fetch images error:', err);
+      } finally {
+        setIsFetching(false);
+      }
+    };
+    fetchImages();
+  };
 
   useEffect(() => {
     if (loading) {
@@ -261,12 +353,37 @@ const GeneratePage = () => {
             </div>
             <h2 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Generated Images</h2>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3 p-4 min-h-[240px]">
-              {showLoader && images.length === 0 ? (
+              {isFetching ? (
                 <div className="col-span-full flex justify-center items-center h-40">
-                  <svg className="animate-spin h-10 w-10 text-blue-400" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
+                  <div className="flex flex-col items-center gap-3">
+                    <svg className="animate-spin h-10 w-10 text-blue-400" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    <p className="text-[#9cabba] text-sm">Loading your images...</p>
+                  </div>
+                </div>
+              ) : fetchError ? (
+                <div className="col-span-full flex justify-center items-center h-40">
+                  <div className="flex flex-col items-center gap-4 text-center">
+                    <div className="text-red-400 text-4xl">⚠️</div>
+                    <div className="text-white text-lg font-semibold">Failed to Load Images</div>
+                    <p className="text-[#9cabba] text-sm max-w-md">{fetchError}</p>
+                    <Button
+                      onClick={handleRetryFetch}
+                      className="bg-[#0c7ff2] text-white px-4 py-2 rounded-lg hover:bg-[#0a6fd8] transition-colors"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                </div>
+              ) : images.length === 0 ? (
+                <div className="col-span-full flex justify-center items-center h-40">
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <div className="text-[#9cabba] text-4xl">🖼️</div>
+                    <div className="text-white text-lg font-semibold">No Images Yet</div>
+                    <p className="text-[#9cabba] text-sm">Generate your first image to see it here!</p>
+                  </div>
                 </div>
               ) : (
                 images.map((imgObj, idx) => (
@@ -280,7 +397,21 @@ const GeneratePage = () => {
                         src={imgObj.imageUrl}
                         alt={`Generated ${idx}`}
                         className="object-cover w-full h-full rounded-xl"
+                        onError={(e) => {
+                          // Handle image load errors
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
                       />
+                      <div 
+                        className="hidden w-full h-full items-center justify-center bg-[#283039] rounded-xl"
+                        style={{ display: 'none' }}
+                      >
+                        <div className="text-center">
+                          <div className="text-[#9cabba] text-2xl mb-2">🖼️</div>
+                          <p className="text-[#9cabba] text-xs">Image unavailable</p>
+                        </div>
+                      </div>
                     </div>
                     <div
                       className="absolute bottom-2 right-2 flex gap-2 z-10 items-center"
