@@ -105,8 +105,32 @@ const GeneratePage = () => {
           },
           body: formData,
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to generate image');
+        
+        let data;
+        try {
+          data = await res.json();
+        } catch (parseError) {
+          // If response is not JSON, handle as network/server error
+          if (!res.ok) {
+            throw new Error('Server error. Please try again later.');
+          } else {
+            throw new Error('Invalid response from server.');
+          }
+        }
+        
+        if (!res.ok) {
+          // Handle specific error cases
+          if (res.status === 401) {
+            throw new Error('Please log in again to continue.');
+          } else if (res.status === 403) {
+            throw new Error(data.error || 'Insufficient credits. Please purchase more credits to continue.');
+          } else if (res.status === 400) {
+            throw new Error(data.error || 'Invalid request. Please check your input.');
+          } else {
+            throw new Error(data.error || 'Failed to generate image. Please try again.');
+          }
+        }
+        
         newImage = data.image;
         setImageFile(null);
         setImagePreview(null);
@@ -120,8 +144,32 @@ const GeneratePage = () => {
           },
           body: JSON.stringify({ prompt }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to generate image');
+        
+        let data;
+        try {
+          data = await res.json();
+        } catch (parseError) {
+          // If response is not JSON, handle as network/server error
+          if (!res.ok) {
+            throw new Error('Server error. Please try again later.');
+          } else {
+            throw new Error('Invalid response from server.');
+          }
+        }
+        
+        if (!res.ok) {
+          // Handle specific error cases
+          if (res.status === 401) {
+            throw new Error('Please log in again to continue.');
+          } else if (res.status === 403) {
+            throw new Error(data.error || 'Insufficient credits. Please purchase more credits to continue.');
+          } else if (res.status === 400) {
+            throw new Error(data.error || 'Invalid request. Please check your input.');
+          } else {
+            throw new Error(data.error || 'Failed to generate image. Please try again.');
+          }
+        }
+        
         newImage = data.images[0];
       }
       setImages([newImage, ...images]);
