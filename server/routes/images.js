@@ -359,7 +359,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
 // Update image
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { title, description, tags, isPublic } = req.body;
+    const { title, description, tags, isPublic, prompt } = req.body;
 
     const image = await Image.findOne({
       _id: req.params.id,
@@ -375,6 +375,7 @@ router.put('/:id', auth, async (req, res) => {
     if (description !== undefined) updates.description = description;
     if (tags !== undefined) updates.tags = tags;
     if (isPublic !== undefined) updates.isPublic = isPublic;
+    if (prompt !== undefined) updates.prompt = prompt;
 
     const updatedImage = await Image.findByIdAndUpdate(
       req.params.id,
