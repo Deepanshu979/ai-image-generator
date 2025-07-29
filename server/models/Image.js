@@ -40,6 +40,29 @@ const imageSchema = new mongoose.Schema({
     required: true,
     enum: ['openai-dall-e-3', 'stable-diffusion', 'midjourney', 'custom', 'upload', 'flux']
   },
+  // Versioning fields
+  versionInfo: {
+    versionNumber: {
+      type: Number,
+      default: 1
+    },
+    parentImage: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Image'
+    },
+    rootImage: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Image'
+    },
+    isRoot: {
+      type: Boolean,
+      default: true
+    },
+    versionChain: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Image'
+    }]
+  },
   settings: {
     width: {
       type: Number,
@@ -97,5 +120,7 @@ const imageSchema = new mongoose.Schema({
 imageSchema.index({ user: 1, createdAt: -1 });
 imageSchema.index({ tags: 1 });
 imageSchema.index({ status: 1 });
+imageSchema.index({ 'versionInfo.rootImage': 1 });
+imageSchema.index({ 'versionInfo.parentImage': 1 });
 
 module.exports = mongoose.model('Image', imageSchema); 
