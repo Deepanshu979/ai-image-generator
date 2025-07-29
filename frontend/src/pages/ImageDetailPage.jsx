@@ -245,8 +245,8 @@ const ImageDetailPage = () => {
           {/* Left Column - Image and Details */}
           <div className="flex flex-col flex-1 max-w-[920px]">
             {/* Image Display */}
-            <div className="w-full aspect-[3/2] rounded-xl overflow-hidden mb-6">
-              <div className="w-full h-full relative">
+            <div className="w-full aspect-[3/2] rounded-xl overflow-hidden mb-6 bg-[#1a1a1a]">
+              <div className="w-full h-full relative flex items-center justify-center p-4">
                 {isGenerating ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-[#101923]">
                     <svg className="animate-spin h-10 w-10 text-blue-400" viewBox="0 0 24 24">
@@ -255,11 +255,26 @@ const ImageDetailPage = () => {
                     </svg>
                   </div>
                 ) : (
-                  <img
-                    src={image?.imageUrl}
-                    alt={image?.prompt || 'Generated image'}
-                    className="w-full h-full object-cover"
-                  />
+                  <>
+                    <img
+                      src={image?.imageUrl}
+                      alt={image?.prompt || 'Generated image'}
+                      className="max-w-full max-h-full object-contain rounded-lg"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <div 
+                      className="hidden w-full h-full items-center justify-center text-[#9badc0]"
+                      style={{ display: 'none' }}
+                    >
+                      <div className="text-center">
+                        <div className="text-4xl mb-2">🖼️</div>
+                        <p className="text-sm">Image unavailable</p>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
