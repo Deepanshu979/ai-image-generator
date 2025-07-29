@@ -331,6 +331,132 @@ router.post('/:id/like', auth, async (req, res) => {
   }
 });
 
+// Get image versions (version history)
+router.get('/:id/versions', auth, async (req, res) => {
+  try {
+    const image = await Image.findById(req.params.id);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    // Check if user owns the image
+    if (image.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Get the root image ID (either this image if it's root, or its root)
+    const rootImageId = image.versionInfo.isRoot ? image._id : image.versionInfo.rootImage;
+
+    // Find all versions of this image (same root)
+    const versions = await Image.find({
+      $or: [
+        { _id: rootImageId },
+        { 'versionInfo.rootImage': rootImageId }
+      ]
+    })
+    .sort({ 'versionInfo.versionNumber': 1, createdAt: 1 })
+    .select('_id title prompt imageUrl versionInfo createdAt');
+
+    res.json({ versions });
+  } catch (error) {
+    console.error('Get versions error:', error);
+    res.status(500).json({ error: 'Failed to get image versions' });
+  }
+});
+
+// Create new version from existing image
+router.post('/:id/versions', auth, checkCredits(1), deductCredits(1), upload.single('image'), async (req, res) => {
+  try {
+    const originalImage = await Image.findById(req.params.id);
+    if (!originalImage) {
+      return res.status(404).json({ error: 'Original image not found' });
+    }
+
+    // Check if user owns the image
+    if (originalImage.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const { prompt, guidance = 2.5, speed_mode = 'Real Time', title, description, tags = [], isPublic } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required for image-to-image generation.' });
+    }
+
+    // Generate new version using image-to-image
+    const result = await aiService.imageToImage({
+      imageBuffer: req.file.buffer,
+      prompt,
+      guidance: parseFloat(guidance),
+      speed_mode
+    });
+
+    if (!result.success) {
+      return res.status(500).json({ error: result.error });
+    }
+
+    // Upload to Cloudinary
+    const cloudinaryUrl = await aiService.uploadImageUrlToCloudinary(result.imageUrl, {
+      folder: 'ai-generator',
+      resource_type: 'image'
+    });
+
+    // Determine root image and version number
+    const rootImageId = originalImage.versionInfo.isRoot ? originalImage._id : originalImage.versionInfo.rootImage;
+    const rootImage = await Image.findById(rootImageId);
+    
+    // Get next version number
+    const existingVersions = await Image.find({
+      $or: [
+        { _id: rootImageId },
+        { 'versionInfo.rootImage': rootImageId }
+      ]
+    });
+    const nextVersionNumber = Math.max(...existingVersions.map(v => v.versionInfo.versionNumber)) + 1;
+
+    // Create version chain (path from root to this version)
+    const versionChain = [...(originalImage.versionInfo.versionChain || []), originalImage._id];
+
+    // Create new version
+    const newVersion = new Image({
+      user: req.user._id,
+      username: req.user.username,
+      title: title || `Version ${nextVersionNumber}: ${prompt.substring(0, 50)}...`,
+      description: description || '',
+      prompt,
+      imageUrl: cloudinaryUrl,
+      model: 'flux',
+      versionInfo: {
+        versionNumber: nextVersionNumber,
+        parentImage: originalImage._id,
+        rootImage: rootImageId,
+        isRoot: false,
+        versionChain
+      },
+      settings: {},
+      tags,
+      isPublic: isPublic !== undefined ? (isPublic === 'true' || isPublic === true) : true,
+      status: 'completed'
+    });
+
+    await newVersion.save();
+    await newVersion.populate('user', 'username');
+
+    res.json({ 
+      message: 'New version created successfully', 
+      image: newVersion,
+      versionNumber: nextVersionNumber
+    });
+  } catch (error) {
+    console.error('Create version error:', error);
+    res.status(500).json({ error: 'Failed to create new version' });
+  }
+});
+
 // Get single image
 router.get('/:id', optionalAuth, async (req, res) => {
   try {

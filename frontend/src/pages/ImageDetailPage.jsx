@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../layouts/Navbar';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import Toast from '../components/ui/toast';
-import { ArrowLeft, Download, Pencil, Film, Edit3, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Download, Heart, Share, MoreHorizontal, Edit3, RefreshCw } from 'lucide-react';
 
 const ImageDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [image, setImage] = useState(null);
+  const [historyImages, setHistoryImages] = useState([]);
   const [error, setError] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -17,6 +18,7 @@ const ImageDetailPage = () => {
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [imageVersions, setImageVersions] = useState([]);
 
   useEffect(() => {
     const fetchImage = async () => {
@@ -40,6 +42,35 @@ const ImageDetailPage = () => {
     };
     fetchImage();
   }, [id]);
+
+  // Fetch image versions (proper versioning system)
+  useEffect(() => {
+    const fetchImageVersions = async () => {
+      if (!image) return;
+      
+      try {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/${id}/versions`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          // Filter out the current image and sort by version number
+          const filteredVersions = data.versions
+            .filter(version => version._id !== id)
+            .sort((a, b) => b.versionInfo.versionNumber - a.versionInfo.versionNumber);
+          setImageVersions(filteredVersions);
+        } else {
+          console.error('Failed to fetch versions:', res.status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch image versions:', err);
+      }
+    };
+    fetchImageVersions();
+  }, [id, image]);
 
   useEffect(() => {
     if (showToast) {
@@ -133,12 +164,13 @@ const ImageDetailPage = () => {
       const blob = await response.blob();
       const file = new File([blob], 'current-image.jpg', { type: 'image/jpeg' });
 
-      // Create FormData for image-to-image generation
+      // Create FormData for version creation
       const formData = new FormData();
       formData.append('image', file);
       formData.append('prompt', image.prompt || 'Enhance this image');
 
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/upload`, {
+      // Use the proper versioning endpoint
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/${id}/versions`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -169,13 +201,13 @@ const ImageDetailPage = () => {
         }
       }
 
-      // Update the current image with the new one (stay on same page)
+      // Update the current image with the new version
       setImage(data.image);
       
       // Update the URL to reflect the new image ID
       navigate(`/image/${data.image._id}`, { replace: true });
       
-      setError('New image generated successfully!');
+      setError(`Version ${data.versionNumber} created successfully!`);
       setShowToast(true);
     } catch (err) {
       setError(err.message);
@@ -194,122 +226,222 @@ const ImageDetailPage = () => {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-[#101923] overflow-x-hidden" style={{ fontFamily: 'Spline Sans, Noto Sans, sans-serif' }}>
+    <div className="relative flex size-full min-h-screen flex-col bg-[#101923] dark group/design-root overflow-x-hidden" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
       <Navbar />
       <Toast message={error} show={showToast} onClose={() => setShowToast(false)} type={error.includes('successfully') ? 'success' : 'error'} />
-      <div className="flex flex-col items-center py-4 sm:py-6 md:py-8 px-2 sm:px-4">
-        <div className="w-full max-w-2xl flex flex-col gap-4 sm:gap-6">
-          {/* Back Button */}
-          <Button variant="ghost" className="self-start mb-2 text-white text-sm sm:text-base" onClick={() => navigate(-1)}>
-            <ArrowLeft className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-white" /> Back
-          </Button>
-          {/* Image Card */}
-          <Card className="rounded-2xl shadow-lg overflow-hidden w-full">
-            {isGenerating ? (
-              <div className="flex min-h-[480px] items-center justify-center bg-[#222]">
-                <svg className="animate-spin w-10 h-10 text-white" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                </svg>
+      
+      <div className="layout-container flex h-full grow flex-col">
+        {/* Breadcrumb */}
+        <div className="flex flex-wrap gap-2 p-4">
+          <Link to="/generate" className="text-[#9badc0] text-base font-medium leading-normal hover:text-white transition-colors">
+            Home
+          </Link>
+          <span className="text-[#9badc0] text-base font-medium leading-normal">/</span>
+          <span className="text-white text-base font-medium leading-normal">Image</span>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex w-full grow bg-[#101923] p-4">
+          {/* Left Column - Image and Details */}
+          <div className="flex flex-col flex-1 max-w-[920px]">
+            {/* Image Display */}
+            <div className="w-full aspect-[3/2] rounded-xl overflow-hidden mb-6">
+              <div className="w-full h-full relative">
+                {isGenerating ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-[#101923]">
+                    <svg className="animate-spin h-10 w-10 text-blue-400" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                  </div>
+                ) : (
+                  <img
+                    src={image?.imageUrl}
+                    alt={image?.prompt || 'Generated image'}
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </div>
-            ) : (
-              <img
-                src={image?.imageUrl}
-                alt={image?.prompt || 'Generated image'}
-                className="w-full object-contain max-h-[480px] bg-[#222]"
-              />
-            )}
-          </Card>
-          {/* Prompt with Edit and Generate Icons */}
-          <div className="bg-[#1b2127] rounded-xl p-3 sm:p-4 shadow border border-[#283039] w-full">
-            <div className="text-[#9cabba] text-xs sm:text-sm font-semibold mb-1">Prompt</div>
-            {isEditingPrompt ? (
-              <div className="flex flex-col gap-2">
-                <textarea
-                  value={editedPrompt}
-                  onChange={(e) => setEditedPrompt(e.target.value)}
-                  className="w-full p-2 bg-[#283039] text-white rounded border border-[#3a4750] focus:outline-none focus:border-[#0c7ff2] resize-none text-sm sm:text-base"
-                  rows={3}
-                  placeholder="Enter your prompt..."
-                />
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    className="bg-[#0c7ff2] text-white text-xs sm:text-sm"
-                    onClick={handleSavePrompt}
-                  >
-                    Save
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="text-white border-[#3a4750] text-xs sm:text-sm"
-                    onClick={handleCancelEdit}
-                  >
-                    Cancel
-                  </Button>
+            </div>
+
+            {/* Title */}
+            <h1 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 text-left pb-3 pt-5">
+              {image?.title || 'Generated Image'}
+            </h1>
+
+            {/* Description */}
+            <p className="text-white text-base font-normal leading-normal pb-3 pt-1 px-4">
+              {image?.description || image?.prompt || 'AI generated image'}
+            </p>
+
+            {/* Prompt Section */}
+            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Prompt</h3>
+            <div className="px-4 pb-3 pt-1">
+              {isEditingPrompt ? (
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    value={editedPrompt}
+                    onChange={(e) => setEditedPrompt(e.target.value)}
+                    className="w-full p-3 bg-[#283039] text-white rounded-lg border border-[#3a4750] focus:outline-none focus:border-[#0c7ff2] resize-none text-sm"
+                    rows={3}
+                    placeholder="Enter your prompt..."
+                  />
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      className="bg-[#0c7ff2] text-white text-sm"
+                      onClick={handleSavePrompt}
+                    >
+                      Save
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-white border-[#3a4750] text-sm"
+                      onClick={handleCancelEdit}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-white text-base font-normal leading-normal flex-1">
+                    {image?.prompt || 'No prompt available'}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleEditPrompt}
+                      className="p-2 text-[#9badc0] hover:text-white hover:bg-[#283039] rounded-lg transition-colors"
+                      title="Edit prompt"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={handleGenerateNewImage}
+                      disabled={isGenerating}
+                      className="p-2 text-[#9badc0] hover:text-white hover:bg-[#283039] rounded-lg transition-colors disabled:opacity-50"
+                      title="Generate new image using current image"
+                    >
+                      {isGenerating ? (
+                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                        </svg>
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Settings Section */}
+            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Settings</h3>
+            <div className="p-4 grid grid-cols-[20%_1fr] gap-x-6">
+              <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#3b4c5e] py-5">
+                <p className="text-[#9badc0] text-sm font-normal leading-normal">Model</p>
+                <p className="text-white text-sm font-normal leading-normal">{image?.model || 'Unknown'}</p>
+              </div>
+              <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#3b4c5e] py-5">
+                <p className="text-[#9badc0] text-sm font-normal leading-normal">Created</p>
+                <p className="text-white text-sm font-normal leading-normal">
+                  {image?.createdAt ? new Date(image.createdAt).toLocaleDateString() : 'Unknown'}
+                </p>
+              </div>
+              <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#3b4c5e] py-5">
+                <p className="text-[#9badc0] text-sm font-normal leading-normal">Status</p>
+                <p className="text-white text-sm font-normal leading-normal">{image?.status || 'Completed'}</p>
+              </div>
+              {image?.settings && Object.keys(image.settings).length > 0 && (
+                Object.entries(image.settings).map(([key, value]) => (
+                  <div key={key} className="col-span-2 grid grid-cols-subgrid border-t border-t-[#3b4c5e] py-5">
+                    <p className="text-[#9badc0] text-sm font-normal leading-normal capitalize">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </p>
+                    <p className="text-white text-sm font-normal leading-normal">{String(value)}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-4 px-4 py-2">
+              <div className="flex items-center justify-center gap-2 px-3 py-2">
+                <div className="text-[#9badc0]">
+                  <Heart className="w-6 h-6" />
                 </div>
               </div>
-            ) : (
-              <div className="flex items-start justify-between gap-2">
-                <div className="text-white text-sm sm:text-base flex-1">{image?.prompt}</div>
-                <div className="flex gap-1 sm:gap-2">
-                  <button
-                    onClick={handleEditPrompt}
-                    className="p-1.5 sm:p-2 text-[#9cabba] hover:text-white hover:bg-[#283039] rounded-lg transition-colors"
-                    title="Edit prompt"
-                  >
-                    <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </button>
-                  <button
-                    onClick={handleGenerateNewImage}
-                    disabled={isGenerating}
-                    className="p-1.5 sm:p-2 text-[#9cabba] hover:text-white hover:bg-[#283039] rounded-lg transition-colors disabled:opacity-50"
-                    title="Generate new image using current image"
-                  >
-                    {isGenerating ? (
-                      <svg className="animate-spin w-3.5 h-3.5 sm:w-4 sm:h-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                      </svg>
-                    ) : (
-                      <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    )}
-                  </button>
+              <div className="flex items-center justify-center gap-2 px-3 py-2">
+                <div 
+                  className="text-[#9badc0] cursor-pointer hover:text-white transition-colors"
+                  onClick={() => {
+                    const promptPart = (image.prompt || 'image').replace(/\s+/g, '-').substring(0, 10);
+                    const datePart = image.createdAt ? new Date(image.createdAt).toISOString().split('T')[0] : '';
+                    const filename = `${promptPart}-${datePart}-${image._id}.jpg`;
+                    handleDownload(image.imageUrl, filename);
+                  }}
+                >
+                  <Download className="w-6 h-6" />
                 </div>
               </div>
-            )}
-          </div>
-          {/* Model Info */}
-          <div className="bg-[#1b2127] rounded-xl p-3 sm:p-4 shadow border border-[#283039] flex flex-wrap gap-4 sm:gap-8 justify-between items-center w-full">
-            <div>
-              <div className="text-[#9cabba] text-xs font-semibold">Model</div>
-              <div className="text-white font-bold text-sm sm:text-base">{image?.model}</div>
+              <div className="flex items-center justify-center gap-2 px-3 py-2">
+                <div className="text-[#9badc0]">
+                  <Share className="w-6 h-6" />
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-2 px-3 py-2">
+                <div className="text-[#9badc0]">
+                  <MoreHorizontal className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+
+            {/* Remix Button */}
+            <div className="flex px-4 py-3 justify-start">
+              <Button
+                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#d2e2f3] text-[#14191f] text-sm font-bold leading-normal tracking-[0.015em]"
+                onClick={() => navigate('/generate')}
+              >
+                <span className="truncate">Remix</span>
+              </Button>
             </div>
           </div>
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between w-full">
-            <Button
-              className="flex-1 bg-[#0c7ff2] text-white flex items-center justify-center gap-2 text-sm sm:text-base"
-              onClick={() => {
-                const promptPart = (image.prompt || 'image').replace(/\s+/g, '-').substring(0, 10);
-                const datePart = image.createdAt ? new Date(image.createdAt).toISOString().split('T')[0] : '';
-                const filename = `${promptPart}-${datePart}-${image._id}.jpg`;
-                handleDownload(image.imageUrl, filename);
-              }}
-              disabled={downloading}
-            >
-              {downloading ? (
-                <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5 text-white" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                </svg>
-              ) : <Download className="w-4 h-4 sm:w-5 sm:h-5" />}
-              Download
-            </Button>
-            <Button className="flex-1 bg-[#a259ff] text-white flex items-center justify-center gap-2 text-sm sm:text-base" variant="secondary">
-              <Film className="w-4 h-4 sm:w-5 sm:h-5" /> Create Video
-            </Button>
+
+          {/* Right Column - Version History */}
+          <div className="flex flex-col w-[360px] ml-6">
+            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Version History</h3>
+            <p className="text-[#9badc0] text-sm px-4 pb-4">Previous versions of this image</p>
+            <div className="grid grid-cols-2 gap-3 p-4">
+              {imageVersions.length > 0 ? (
+                imageVersions.map((versionImage, index) => (
+                  <div key={versionImage._id} className="flex flex-col gap-2">
+                    <div
+                      className="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity border-2 border-transparent hover:border-[#0c7ff2] relative"
+                      style={{ backgroundImage: `url(${versionImage.imageUrl})` }}
+                      onClick={() => navigate(`/image/${versionImage._id}`)}
+                      title={`Version ${versionImage.versionInfo.versionNumber}: ${versionImage.prompt?.substring(0, 30)}...`}
+                    >
+                      <div className="absolute top-1 right-1 bg-[#0c7ff2] text-white text-xs px-1 py-0.5 rounded">
+                        v{versionImage.versionInfo.versionNumber}
+                      </div>
+                    </div>
+                    <p className="text-[#9badc0] text-xs truncate px-1">
+                      {versionImage.prompt?.substring(0, 25)}...
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-2 flex justify-center items-center h-40">
+                  <div className="text-center">
+                    <div className="text-[#9badc0] text-2xl mb-2">🔄</div>
+                    <p className="text-[#9badc0] text-sm">No previous versions</p>
+                    <p className="text-[#9badc0] text-xs mt-1">Edit this image to create versions</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
