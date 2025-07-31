@@ -241,37 +241,69 @@ const ImageDetailPage = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex w-full grow bg-[#101923] p-4">
+        <div className="flex w-full grow bg-[#101923] p-6 gap-8">
           {/* Left Column - Image and Details */}
-          <div className="flex flex-col flex-1 max-w-[920px]">
+          <div className="flex flex-col flex-1">
             {/* Image Display */}
-            <div className="w-full aspect-[3/2] rounded-xl overflow-hidden mb-6 bg-[#1a1a1a]">
-              <div className="w-full h-full relative flex items-center justify-center p-4">
+            <div className="max-w-4xl rounded-xl overflow-hidden mb-8 bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] border border-[#3a4750] shadow-2xl">
+              <div className="relative group">
                 {isGenerating ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-[#101923]">
-                    <svg className="animate-spin h-10 w-10 text-blue-400" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                    </svg>
+                  <div className="flex items-center justify-center bg-[#101923] p-12">
+                    <div className="text-center">
+                      <svg className="animate-spin h-12 w-12 text-blue-400 mx-auto mb-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                      <p className="text-[#9badc0] text-sm">Generating new version...</p>
+                    </div>
                   </div>
                 ) : (
                   <>
-                    <img
-                      src={image?.imageUrl}
-                      alt={image?.prompt || 'Generated image'}
-                      className="max-w-full max-h-full object-contain rounded-lg"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
+                    <div className="flex justify-center p-6">
+                      <img
+                        src={image?.imageUrl}
+                        alt={image?.prompt || 'Generated image'}
+                        className="w-full h-full object-contain rounded-lg shadow-lg transition-transform duration-300 group-hover:scale-[1.02] cursor-zoom-in"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                        onClick={() => {
+                          // Open image in new tab for full view
+                          window.open(image?.imageUrl, '_blank');
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Image overlay with info */}
+                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-xs">
+                        <div className="flex items-center gap-2">
+                          <span>Click to view full size</span>
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zM9 21l-2.3-2.3-2.87 2.89-1.42-1.42L5.3 17.3 3 15v6h6zM21 15l-2.3 2.3-2.89-2.87-1.42 1.42L17.3 18.7 15 21h6v-6z"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Image metadata overlay */}
+                    <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-xs">
+                        <div className="flex items-center gap-2">
+                          <span>Generated with {image?.model}</span>
+                        </div>
+                      </div>
+                    </div>
+
                     <div 
-                      className="hidden w-full h-full items-center justify-center text-[#9badc0]"
+                      className="hidden items-center justify-center text-[#9badc0] p-12"
                       style={{ display: 'none' }}
                     >
                       <div className="text-center">
-                        <div className="text-4xl mb-2">🖼️</div>
-                        <p className="text-sm">Image unavailable</p>
+                        <div className="text-6xl mb-4">🖼️</div>
+                        <p className="text-lg font-medium mb-2">Image unavailable</p>
+                        <p className="text-sm text-[#7a8a9a]">The image could not be loaded</p>
                       </div>
                     </div>
                   </>
@@ -280,18 +312,18 @@ const ImageDetailPage = () => {
             </div>
 
             {/* Title */}
-            <h1 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 text-left pb-3 pt-5">
+            <h1 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] text-left pb-3 pt-5">
               {image?.title || 'Generated Image'}
             </h1>
 
             {/* Description */}
-            <p className="text-white text-base font-normal leading-normal pb-3 pt-1 px-4">
+            <p className="text-white text-base font-normal leading-normal pb-3 pt-1">
               {image?.description || image?.prompt || 'AI generated image'}
             </p>
 
             {/* Prompt Section */}
-            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Prompt</h3>
-            <div className="px-4 pb-3 pt-1">
+            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">Prompt</h3>
+            <div className="pb-3 pt-1">
               {isEditingPrompt ? (
                 <div className="flex flex-col gap-2">
                   <textarea
@@ -353,8 +385,8 @@ const ImageDetailPage = () => {
             </div>
 
             {/* Settings Section */}
-            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Settings</h3>
-            <div className="p-4 grid grid-cols-[20%_1fr] gap-x-6">
+            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">Settings</h3>
+            <div className="grid grid-cols-[20%_1fr] gap-x-6">
               <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#3b4c5e] py-5">
                 <p className="text-[#9badc0] text-sm font-normal leading-normal">Model</p>
                 <p className="text-white text-sm font-normal leading-normal">{image?.model || 'Unknown'}</p>
@@ -382,7 +414,7 @@ const ImageDetailPage = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-4 px-4 py-2">
+            <div className="flex flex-wrap gap-4 py-2">
               <div className="flex items-center justify-center gap-2 px-3 py-2">
                 <div className="text-[#9badc0]">
                   <Heart className="w-6 h-6" />
@@ -414,7 +446,7 @@ const ImageDetailPage = () => {
             </div>
 
             {/* Remix Button */}
-            <div className="flex px-4 py-3 justify-start">
+            <div className="flex py-3 justify-start">
               <Button
                 className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#d2e2f3] text-[#14191f] text-sm font-bold leading-normal tracking-[0.015em]"
                 onClick={() => navigate('/generate')}
@@ -425,10 +457,10 @@ const ImageDetailPage = () => {
           </div>
 
           {/* Right Column - Version History */}
-          <div className="flex flex-col w-[360px] ml-6">
-            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Version History</h3>
-            <p className="text-[#9badc0] text-sm px-4 pb-4">Previous versions of this image</p>
-            <div className="grid grid-cols-2 gap-3 p-4">
+          <div className="flex flex-col w-[300px]">
+            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">Version History</h3>
+            <p className="text-[#9badc0] text-sm pb-4">Previous versions of this image</p>
+            <div className="grid grid-cols-2 gap-4">
               {imageVersions.length > 0 ? (
                 imageVersions.map((versionImage, index) => (
                   <div key={versionImage._id} className="flex flex-col gap-2">
@@ -442,7 +474,7 @@ const ImageDetailPage = () => {
                         v{versionImage.versionInfo.versionNumber}
                       </div>
                     </div>
-                    <p className="text-[#9badc0] text-xs truncate px-1">
+                    <p className="text-[#9badc0] text-xs truncate">
                       {versionImage.prompt?.substring(0, 25)}...
                     </p>
                   </div>
