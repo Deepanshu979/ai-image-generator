@@ -241,14 +241,14 @@ const ImageDetailPage = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex w-full grow bg-[#101923] p-6 gap-8">
+        <div className="flex w-full grow bg-[#101923] p-6 gap-6 justify-center">
           {/* Left Column - Image and Details */}
-          <div className="flex flex-col flex-1">
+          <div className="flex flex-col flex-1 max-w-4xl">
             {/* Image Display */}
-            <div className="max-w-4xl rounded-xl overflow-hidden mb-8 bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] border border-[#3a4750] shadow-2xl">
-              <div className="relative group">
+            <div className="max-w-3xl max-h-[28rem] rounded-xl overflow-hidden mb-8 bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] border border-[#3a4750] shadow-2xl">
+              <div className="relative group h-full">
                 {isGenerating ? (
-                  <div className="flex items-center justify-center bg-[#101923] p-12">
+                  <div className="flex items-center justify-center bg-[#101923] p-12 h-full">
                     <div className="text-center">
                       <svg className="animate-spin h-12 w-12 text-blue-400 mx-auto mb-4" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -259,7 +259,7 @@ const ImageDetailPage = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="flex justify-center p-6">
+                    <div className="flex justify-center items-center p-6 h-full">
                       <img
                         src={image?.imageUrl}
                         alt={image?.prompt || 'Generated image'}
@@ -457,10 +457,10 @@ const ImageDetailPage = () => {
           </div>
 
           {/* Right Column - Version History */}
-          <div className="flex flex-col w-[300px]">
+          <div className="flex flex-col w-[280px]">
             <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">Version History</h3>
             <p className="text-[#9badc0] text-sm pb-4">Previous versions of this image</p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {imageVersions.length > 0 ? (
                 imageVersions.map((versionImage, index) => (
                   <div key={versionImage._id} className="flex flex-col gap-2">
