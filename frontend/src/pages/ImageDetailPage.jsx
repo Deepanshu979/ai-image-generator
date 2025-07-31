@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../layouts/Navbar';
-import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import Toast from '../components/ui/toast';
-import { ArrowLeft, Download, Heart, Share, MoreHorizontal, Edit3, RefreshCw } from 'lucide-react';
+import { Download, Heart, Share, MoreHorizontal, Edit3, RefreshCw } from 'lucide-react';
 
 const ImageDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [image, setImage] = useState(null);
-  const [historyImages, setHistoryImages] = useState([]);
   const [error, setError] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [loading, setLoading] = useState(true);

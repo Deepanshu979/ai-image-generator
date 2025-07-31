@@ -22,6 +22,11 @@ const GeneratePage = () => {
   const loaderTimeout = useRef(null);
   const [fetchError, setFetchError] = useState('');
   const [isFetching, setIsFetching] = useState(false);
+  const [imageVersions, setImageVersions] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalImages, setTotalImages] = useState(0);
+  const [imagesPerPage] = useState(20);
 
   useEffect(() => {
     if (showToast) {
@@ -48,7 +53,7 @@ const GeneratePage = () => {
         return;
       }
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/user/${userId}`, {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/user/${userId}?page=${currentPage}&limit=${imagesPerPage}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
@@ -79,8 +84,12 @@ const GeneratePage = () => {
 
         if (data.images) {
           setImages(data.images); // store full objects
+          setTotalImages(data.pagination?.total || 0);
+          setTotalPages(data.pagination?.pages || 1);
         } else {
           setImages([]); // set empty array if no images
+          setTotalImages(0);
+          setTotalPages(1);
         }
       } catch (err) {
         setFetchError(err.message);
@@ -90,10 +99,11 @@ const GeneratePage = () => {
       }
     };
     fetchImages();
-  }, []);
+  }, [currentPage, imagesPerPage]);
 
   // Retry function for fetching images
   const handleRetryFetch = () => {
+    setCurrentPage(1); // Reset to first page when retrying
     const fetchImages = async () => {
       setIsFetching(true);
       setFetchError('');
@@ -103,7 +113,7 @@ const GeneratePage = () => {
         return;
       }
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/user/${userId}`, {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/user/${userId}?page=1&limit=${imagesPerPage}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
@@ -134,8 +144,12 @@ const GeneratePage = () => {
 
         if (data.images) {
           setImages(data.images);
+          setTotalImages(data.pagination?.total || 0);
+          setTotalPages(data.pagination?.pages || 1);
         } else {
           setImages([]);
+          setTotalImages(0);
+          setTotalPages(1);
         }
       } catch (err) {
         setFetchError(err.message);
@@ -145,6 +159,25 @@ const GeneratePage = () => {
       }
     };
     fetchImages();
+  };
+
+  // Pagination navigation functions
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
   };
 
   useEffect(() => {
@@ -301,57 +334,89 @@ const GeneratePage = () => {
       <div className="layout-container flex h-full grow flex-col">
         <div className="px-40 flex flex-1 justify-center py-5">
           <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+            {/* Generation Form - Only show on page 1 */}
+            {currentPage === 1 && (
+              <>
+                <div className="flex flex-wrap justify-between gap-3 p-4">
+                  <div className="flex min-w-72 flex-col gap-3">
+                    <p className="text-white tracking-light text-[32px] font-bold leading-tight">
+                      {imageFile ? 'Image-to-Image Generation' : 'Text-to-Image Generation'}
+                    </p>
+                    <p className="text-[#9cabba] text-sm font-normal leading-normal">
+                      {imageFile
+                        ? 'Upload an image and enter a prompt to generate a new image using AI.'
+                        : 'Enter a prompt to generate a new image using AI.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                  <label className="flex flex-col min-w-40 flex-1">
+                    <input
+                      placeholder="Enter a prompt"
+                      className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-white focus:outline-0 focus:ring-0 border-none bg-[#283039] focus:border-none h-14 placeholder:text-[#9cabba] p-4 text-base font-normal leading-normal"
+                      value={prompt}
+                      onChange={e => setPrompt(e.target.value)}
+                      disabled={loading}
+                    />
+                  </label>
+                </div>
+                <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                  <label className="flex flex-col min-w-40 flex-1">
+                    <span className="text-white text-sm mb-2">Upload Image</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      disabled={loading}
+                      className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#283039] file:text-white hover:file:bg-[#314c68]"
+                    />
+                    {imagePreview && (
+                      <img src={imagePreview} alt="Preview" className="mt-2 rounded-xl max-h-40 object-contain border border-[#314c68]" />
+                    )}
+                  </label>
+                </div>
+                <div className="flex justify-stretch">
+                  <div className="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-start">
+                    <Button
+                      className="flex min-w-[120px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#0c7ff2] text-white text-sm font-bold leading-normal tracking-[0.015em]"
+                      onClick={handleGenerate}
+                      disabled={loading || !prompt.trim()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      <span className="truncate">{loading ? 'Generating...' : 'Generate'}</span>
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Page Header - Show different content based on page */}
             <div className="flex flex-wrap justify-between gap-3 p-4">
               <div className="flex min-w-72 flex-col gap-3">
                 <p className="text-white tracking-light text-[32px] font-bold leading-tight">
-                  {imageFile ? 'Image-to-Image Generation' : 'Text-to-Image Generation'}
+                  {currentPage === 1 ? 'Generated Images' : `Your Images - Page ${currentPage}`}
                 </p>
                 <p className="text-[#9cabba] text-sm font-normal leading-normal">
-                  {imageFile
-                    ? 'Upload an image and enter a prompt to generate a new image using AI.'
-                    : 'Enter a prompt to generate a new image using AI.'}
+                  {currentPage === 1 
+                    ? 'Browse and manage your AI-generated images.'
+                    : `Showing page ${currentPage} of your generated images.`
+                  }
                 </p>
               </div>
+              {/* Generate New Image Button - Only show on pages other than page 1 */}
+              {currentPage !== 1 && (
+                <div className="flex items-center">
+                  <Button
+                    onClick={() => setCurrentPage(1)}
+                    className="flex items-center gap-2 bg-[#0c7ff2] text-white px-4 py-2 rounded-lg hover:bg-[#0a6fd8] transition-colors"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Generate New Image
+                  </Button>
+                </div>
+              )}
             </div>
-            <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-              <label className="flex flex-col min-w-40 flex-1">
-                <input
-                  placeholder="Enter a prompt"
-                  className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-white focus:outline-0 focus:ring-0 border-none bg-[#283039] focus:border-none h-14 placeholder:text-[#9cabba] p-4 text-base font-normal leading-normal"
-                  value={prompt}
-                  onChange={e => setPrompt(e.target.value)}
-                  disabled={loading}
-                />
-              </label>
-            </div>
-            <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-              <label className="flex flex-col min-w-40 flex-1">
-                <span className="text-white text-sm mb-2">Upload Image</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  disabled={loading}
-                  className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#283039] file:text-white hover:file:bg-[#314c68]"
-                />
-                {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="mt-2 rounded-xl max-h-40 object-contain border border-[#314c68]" />
-                )}
-              </label>
-            </div>
-            <div className="flex justify-stretch">
-              <div className="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-start">
-                <Button
-                  className="flex min-w-[120px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#0c7ff2] text-white text-sm font-bold leading-normal tracking-[0.015em]"
-                  onClick={handleGenerate}
-                  disabled={loading || !prompt.trim()}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  <span className="truncate">{loading ? 'Generating...' : 'Generate'}</span>
-                </Button>
-              </div>
-            </div>
-            <h2 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Generated Images</h2>
+
             <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3 p-4 min-h-[240px]">
               {isFetching ? (
                 <div className="col-span-full flex justify-center items-center h-40">
@@ -444,28 +509,84 @@ const GeneratePage = () => {
                 ))
               )}
             </div>
-            {/* Pagination UI (static for now) */}
-            <div className="flex items-center justify-center p-4">
-              <a href="#" className="flex size-10 items-center justify-center">
-                <div className="text-white">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 256 256">
-                    <path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path>
-                  </svg>
+            
+            {/* Pagination UI */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between p-4 border-t border-[#283039]">
+                <div className="text-[#9cabba] text-sm">
+                  Showing {((currentPage - 1) * imagesPerPage) + 1} to {Math.min(currentPage * imagesPerPage, totalImages)} of {totalImages} images
                 </div>
-              </a>
-              <a className="text-sm font-bold leading-normal tracking-[0.015em] flex size-10 items-center justify-center text-white rounded-full bg-[#283039]" href="#">1</a>
-              <a className="text-sm font-normal leading-normal flex size-10 items-center justify-center text-white rounded-full" href="#">2</a>
-              <a className="text-sm font-normal leading-normal flex size-10 items-center justify-center text-white rounded-full" href="#">3</a>
-              <span className="text-sm font-normal leading-normal flex size-10 items-center justify-center text-white rounded-full" href="#">...</span>
-              <a className="text-sm font-normal leading-normal flex size-10 items-center justify-center text-white rounded-full" href="#">10</a>
-              <a href="#" className="flex size-10 items-center justify-center">
-                <div className="text-white">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 256 256">
-                    <path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path>
-                  </svg>
+                
+                <div className="flex items-center gap-2">
+                  {/* Previous Page Button */}
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#283039] text-white hover:bg-[#314c68] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                    </svg>
+                  </button>
+                  
+                  {/* Page Numbers */}
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`flex items-center justify-center w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
+                            currentPage === pageNum
+                              ? 'bg-[#0c7ff2] text-white'
+                              : 'bg-[#283039] text-[#9cabba] hover:bg-[#314c68] hover:text-white'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    
+                    {/* Show ellipsis if needed */}
+                    {totalPages > 5 && currentPage < totalPages - 2 && (
+                      <span className="text-[#9cabba] px-2">...</span>
+                    )}
+                    
+                    {/* Show last page if not in current range */}
+                    {totalPages > 5 && currentPage < totalPages - 2 && (
+                      <button
+                        onClick={() => handlePageChange(totalPages)}
+                        className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#283039] text-[#9cabba] hover:bg-[#314c68] hover:text-white transition-colors"
+                      >
+                        {totalPages}
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Next Page Button */}
+                  <button
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#283039] text-white hover:bg-[#314c68] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/>
+                    </svg>
+                  </button>
                 </div>
-              </a>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -473,4 +594,4 @@ const GeneratePage = () => {
   );
 };
 
-export default GeneratePage; 
+export default GeneratePage;
