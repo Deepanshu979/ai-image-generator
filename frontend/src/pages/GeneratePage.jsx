@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../layouts/Navbar';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import Toast from '../components/ui/toast';
 import { Download, Eye, Upload } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -12,6 +13,8 @@ const GeneratePage = () => {
   const [prompt, setPrompt] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [selectedModel, setSelectedModel] = useState('stable-diffusion');
+  const [availableModels, setAvailableModels] = useState([]);
   const [images, setImages] = useState(initialImages); // now array of objects
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,6 +30,18 @@ const GeneratePage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalImages, setTotalImages] = useState(0);
   const [imagesPerPage] = useState(20);
+
+  // Helper function to get user-friendly model names
+  const getModelDisplayName = (modelKey) => {
+    const modelNames = {
+      'stable-diffusion': 'Stable Diffusion',
+      'flux-schnell': 'Flux Schnell',
+      'openai-dall-e-3': 'OpenAI DALL-E 3',
+      'midjourney': 'Midjourney',
+      'sdxl': 'SDXL (High Quality)'
+    };
+    return modelNames[modelKey] || modelKey;
+  };
 
   useEffect(() => {
     if (showToast) {
@@ -100,6 +115,29 @@ const GeneratePage = () => {
     };
     fetchImages();
   }, [currentPage, imagesPerPage]);
+
+  // Fetch available models
+  useEffect(() => {
+    // Simplified model definitions
+    const textToImageModels = {
+      'stable-diffusion': 'Stable Diffusion',
+      'flux-dev': 'Flux Dev',
+      'flux-schnell': 'Flux Schnell'
+    };
+    
+    const imageToImageModels = {
+      'flux': 'Flux'
+    };
+    
+    // Set models based on current mode
+    if (imageFile) {
+      setAvailableModels(imageToImageModels);
+      setSelectedModel('flux'); // Set to flux for image-to-image
+    } else {
+      setAvailableModels(textToImageModels);
+      setSelectedModel('stable-diffusion'); // Set to stable-diffusion for text-to-image
+    }
+  }, [imageFile]); // Re-run when imageFile changes to switch between modes
 
   // Retry function for fetching images
   const handleRetryFetch = () => {
@@ -267,7 +305,10 @@ const GeneratePage = () => {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({ 
+            prompt,
+            model: selectedModel
+          }),
         });
         
         let data;
@@ -360,6 +401,7 @@ const GeneratePage = () => {
                     />
                   </label>
                 </div>
+                
                 <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                   <label className="flex flex-col min-w-40 flex-1">
                     <span className="text-white text-sm mb-2">Upload Image</span>
@@ -375,16 +417,32 @@ const GeneratePage = () => {
                     )}
                   </label>
                 </div>
+                
                 <div className="flex justify-stretch">
-                  <div className="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-start">
+                  <div className="flex flex-1 gap-3 px-4 py-3 justify-start items-center flex-nowrap">
+                    
                     <Button
-                      className="flex min-w-[120px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#0c7ff2] text-white text-sm font-bold leading-normal tracking-[0.015em]"
+                      className="flex min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#0c7ff2] text-white text-sm font-bold leading-normal tracking-[0.015em]"
                       onClick={handleGenerate}
                       disabled={loading || !prompt.trim()}
                     >
                       <Upload className="w-4 h-4 mr-2" />
                       <span className="truncate">{loading ? 'Generating...' : 'Generate'}</span>
                     </Button>
+
+                    {/* Model Selection - Next to generate button */}
+                    <Select onValueChange={(value) => setSelectedModel(value)} value={selectedModel} defaultValue={selectedModel} disabled={loading}>
+                      <SelectTrigger className="h-10 px-3 rounded-xl bg-[#283039] text-white text-sm border-none focus:outline-none focus:ring-0 w-36">
+                        <SelectValue placeholder="Select a model" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#283039] border-[#3a4750]">
+                        {Object.entries(availableModels).map(([key, name]) => (
+                          <SelectItem key={key} value={key} className="text-white hover:bg-[#314c68] focus:bg-[#314c68]">
+                            {name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </>
