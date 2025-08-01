@@ -32,6 +32,18 @@ class AIService {
         model: 'stability-ai/stable-diffusion:db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf',
         costPerImage: 0.00001
       },
+      'flux-dev': {
+        name: 'Flux Dev',
+        provider: 'replicate',
+        model: 'black-forest-labs/flux-dev:552746e86aee3fe5fa9c6bf38a85a6a2932e27dd2b0dc392e00390fa14527027',
+        costPerImage: 0.00001
+      },
+      'flux-schnell': {
+        name: 'Flux Schnell',
+        provider: 'replicate',
+        model: 'black-forest-labs/flux-schnell:c846a69991daf4c0e5d016514849d14ee5b2e6846ce6b9d6f21369e564cfe51e',
+        costPerImage: 0.00001
+      },
       'midjourney': {
         name: 'Midjourney',
         provider: 'replicate',
@@ -107,12 +119,14 @@ class AIService {
       return {
         success: false,
         generationId,
-        error: error.message,
+        error: error.message || 'Unknown error occurred during image generation',
         metadata: {
           model,
           prompt,
           settings: { width, height, quality, style },
-          processingTime: Date.now() - startTime
+          processingTime: Date.now() - startTime,
+          tokensUsed: 0,
+          cost: 0
         }
       };
     }
@@ -154,7 +168,116 @@ class AIService {
 
   async generateWithReplicate(prompt, options) {
     const { model, width, height, numImages } = options;
+    
+    console.log('generateWithReplicate called with model:', model);
+    console.log('Full options:', options);
 
+    // Handle Flux Dev model specifically
+    if (model === 'black-forest-labs/flux-dev:552746e86aee3fe5fa9c6bf38a85a6a2932e27dd2b0dc392e00390fa14527027') {
+      try {
+        console.log('Starting Flux Dev generation with prompt:', prompt);
+        console.log('Replicate auth token available:', !!process.env.REPLICATE_API_TOKEN);
+        
+        // Flux Dev with correct parameters
+        const output = await replicate.run(model, {
+          input: {
+            prompt: prompt,
+            guidance: 3.5
+          }
+        });
+
+        console.log('Flux Dev output type:', typeof output);
+        console.log('Flux Dev output:', output);
+
+        // Handle different response formats
+        let imageUrl;
+        if (Array.isArray(output)) {
+          console.log('Output is array, length:', output.length);
+          imageUrl = output[0];
+        } else if (output && typeof output === 'object' && output.url) {
+          console.log('Output is object with url property');
+          imageUrl = output.url;
+        } else if (typeof output === 'string') {
+          console.log('Output is direct string URL');
+          imageUrl = output;
+        } else {
+          console.log('Unexpected output format:', output);
+          throw new Error('Unexpected response format from Flux Dev');
+        }
+
+        // If imageUrl is a function, call it
+        if (typeof imageUrl === 'function') {
+          console.log('ImageUrl is a function, calling it');
+          imageUrl = imageUrl();
+        }
+
+        console.log('Final imageUrl:', imageUrl);
+
+        return {
+          images: [{ url: imageUrl }],
+          tokensUsed: 0,
+          cost: 0.01 * numImages
+        };
+      } catch (error) {
+        console.error('Flux Dev generation error:', error);
+        console.error('Error stack:', error.stack);
+        throw new Error(`Flux Dev generation failed: ${error.message}`);
+      }
+    }
+
+    // Handle Flux Schnell model specifically
+    if (model === 'black-forest-labs/flux-schnell:c846a69991daf4c0e5d016514849d14ee5b2e6846ce6b9d6f21369e564cfe51e') {
+      try {
+        console.log('Starting Flux Schnell generation with prompt:', prompt);
+        console.log('Replicate auth token available:', !!process.env.REPLICATE_API_TOKEN);
+        
+        // Flux Schnell with correct parameters
+        const output = await replicate.run(model, {
+          input: {
+            prompt: prompt
+          }
+        });
+
+        console.log('Flux Schnell output type:', typeof output);
+        console.log('Flux Schnell output:', output);
+
+        // Handle different response formats
+        let imageUrl;
+        if (Array.isArray(output)) {
+          console.log('Output is array, length:', output.length);
+          imageUrl = output[0];
+        } else if (output && typeof output === 'object' && output.url) {
+          console.log('Output is object with url property');
+          imageUrl = output.url;
+        } else if (typeof output === 'string') {
+          console.log('Output is direct string URL');
+          imageUrl = output;
+        } else {
+          console.log('Unexpected output format:', output);
+          throw new Error('Unexpected response format from Flux Schnell');
+        }
+
+        // If imageUrl is a function, call it
+        if (typeof imageUrl === 'function') {
+          console.log('ImageUrl is a function, calling it');
+          imageUrl = imageUrl();
+        }
+
+        console.log('Final imageUrl:', imageUrl);
+
+        return {
+          images: [{ url: imageUrl }],
+          tokensUsed: 0,
+          cost: 0.01 * numImages
+        };
+      } catch (error) {
+        console.error('Flux Schnell generation error:', error);
+        console.error('Error stack:', error.stack);
+        throw new Error(`Flux Schnell generation failed: ${error.message}`);
+      }
+    }
+
+    // Handle other Replicate models
     const output = await replicate.run(model, {
       input: {
         prompt: prompt,

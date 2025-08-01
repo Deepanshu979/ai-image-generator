@@ -18,6 +18,19 @@ const ImageDetailPage = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [imageVersions, setImageVersions] = useState([]);
 
+  // Helper function to get user-friendly model names
+  const getModelDisplayName = (modelKey) => {
+    const modelNames = {
+      'stable-diffusion': 'Stable Diffusion',
+      'flux-dev': 'Flux Dev',
+      'flux-schnell': 'Flux Schnell',
+      'openai-dall-e-3': 'OpenAI DALL-E 3',
+      'midjourney': 'Midjourney',
+      'flux': 'Flux (Image-to-Image)'
+    };
+    return modelNames[modelKey] || modelKey;
+  };
+
   useEffect(() => {
     const fetchImage = async () => {
       setLoading(true);
@@ -289,7 +302,7 @@ const ImageDetailPage = () => {
                     <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-xs">
                         <div className="flex items-center gap-2">
-                          <span>Generated with {image?.model}</span>
+                          <span>Generated with {getModelDisplayName(image?.model)}</span>
                         </div>
                       </div>
                     </div>
