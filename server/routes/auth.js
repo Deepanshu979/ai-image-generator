@@ -19,21 +19,22 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
 
-    // Check if user already exists
+    // Check if user already exists (optimized single query)
     const existingUser = await User.findOne({
-      $or: [{ email }, { username }]
-    });
+      $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }]
+    }).select('email username');
 
     if (existingUser) {
-      return res.status(400).json({ 
-        error: 'User with this email or username already exists' 
-      });
+      const error = existingUser.email === email.toLowerCase() 
+        ? 'Email already registered' 
+        : 'Username already taken';
+      return res.status(400).json({ error });
     }
 
     // Create new user
     const user = new User({
-      username,
-      email,
+      username: username.toLowerCase(),
+      email: email.toLowerCase(),
       password
     });
 
@@ -54,6 +55,12 @@ router.post('/register', async (req, res) => {
 
   } catch (error) {
     console.error('Registration error:', error);
+    if (error.code === 11000) {
+      // Duplicate key error
+      const field = Object.keys(error.keyPattern)[0];
+      const message = field === 'email' ? 'Email already registered' : 'Username already taken';
+      return res.status(400).json({ error: message });
+    }
     res.status(500).json({ error: 'Registration failed' });
   }
 });
@@ -68,8 +75,13 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    // Find user by email and update lastLogin in one operation
+    const user = await User.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      { lastLogin: new Date() },
+      { new: true }
+    );
+
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -84,10 +96,6 @@ router.post('/login', async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
 
     // Generate JWT token
     const token = jwt.sign(
@@ -126,28 +134,33 @@ router.put('/profile', auth, async (req, res) => {
     const { username, email, preferences } = req.body;
     const updates = {};
 
-    if (username) {
-      // Check if username is already taken
-      const existingUser = await User.findOne({ 
-        username, 
-        _id: { $ne: req.user._id } 
-      });
+    // Check for conflicts in a single query if both username and email are being updated
+    if (username || email) {
+      const conflictQuery = {
+        _id: { $ne: req.user._id }
+      };
+      
+      if (username) conflictQuery.username = username.toLowerCase();
+      if (email) conflictQuery.email = email.toLowerCase();
+      
+      const existingUser = await User.findOne(conflictQuery).select('email username');
+      
       if (existingUser) {
-        return res.status(400).json({ error: 'Username already taken' });
+        if (username && existingUser.username === username.toLowerCase()) {
+          return res.status(400).json({ error: 'Username already taken' });
+        }
+        if (email && existingUser.email === email.toLowerCase()) {
+          return res.status(400).json({ error: 'This email is already registered' });
+        }
       }
-      updates.username = username;
+    }
+
+    if (username) {
+      updates.username = username.toLowerCase();
     }
 
     if (email) {
-      // Check if email is already taken
-      const existingUser = await User.findOne({ 
-        email, 
-        _id: { $ne: req.user._id } 
-      });
-      if (existingUser) {
-        return res.status(400).json({ error: 'This email is already registered' });
-      }
-      updates.email = email;
+      updates.email = email.toLowerCase();
     }
 
     if (preferences) {
@@ -167,6 +180,11 @@ router.put('/profile', auth, async (req, res) => {
 
   } catch (error) {
     console.error('Profile update error:', error);
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      const message = field === 'email' ? 'This email is already registered' : 'Username already taken';
+      return res.status(400).json({ error: message });
+    }
     res.status(500).json({ error: 'Failed to update profile' });
   }
 });
