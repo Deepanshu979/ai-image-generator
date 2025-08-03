@@ -432,10 +432,10 @@ const GeneratePage = () => {
 
                     {/* Model Selection - Next to generate button */}
                     <Select onValueChange={(value) => setSelectedModel(value)} value={selectedModel} defaultValue={selectedModel} disabled={loading}>
-                      <SelectTrigger className="h-10 px-3 rounded-xl bg-[#283039] text-white text-sm border-none focus:outline-none focus:ring-0 w-36">
+                      <SelectTrigger className="h-10 px-3 rounded-xl bg-[#283039] text-white text-sm border-none focus:outline-none focus:ring-0 min-w-[144px] max-w-[144px] w-[144px] model-dropdown-fixed">
                         <SelectValue placeholder="Select a model" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#283039] border-[#3a4750]">
+                      <SelectContent className="bg-[#283039] border-[#3a4750] min-w-[144px]">
                         {Object.entries(availableModels).map(([key, name]) => (
                           <SelectItem key={key} value={key} className="text-white hover:bg-[#314c68] focus:bg-[#314c68]">
                             {name}
