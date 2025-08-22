@@ -299,35 +299,58 @@ router.get('/user/:userId', auth, async (req, res) => {
   }
 });
 
-// Like/unlike image
+// Like/unlike an image
 router.post('/:id/like', auth, async (req, res) => {
   try {
     const image = await Image.findById(req.params.id);
-    
     if (!image) {
       return res.status(404).json({ error: 'Image not found' });
     }
 
-    const likeIndex = image.likes.indexOf(req.user._id);
-    
-    if (likeIndex > -1) {
-      // Unlike
-      image.likes.splice(likeIndex, 1);
+    const userId = req.user._id;
+    const isLiked = image.likes.includes(userId);
+
+    if (isLiked) {
+      // Unlike: remove user from likes array
+      image.likes = image.likes.filter(id => !id.equals(userId));
     } else {
-      // Like
-      image.likes.push(req.user._id);
+      // Like: add user to likes array
+      image.likes.push(userId);
     }
 
     await image.save();
 
     res.json({
-      message: likeIndex > -1 ? 'Image unliked' : 'Image liked',
-      likes: image.likes.length
+      message: isLiked ? 'Image unliked' : 'Image liked',
+      isLiked: !isLiked,
+      likesCount: image.likes.length
     });
 
   } catch (error) {
-    console.error('Like image error:', error);
-    res.status(500).json({ error: 'Failed to like/unlike image' });
+    console.error('Like/unlike error:', error);
+    res.status(500).json({ error: 'Failed to update like status' });
+  }
+});
+
+// Get like status for an image
+router.get('/:id/like-status', auth, async (req, res) => {
+  try {
+    const image = await Image.findById(req.params.id);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    const userId = req.user._id;
+    const isLiked = image.likes.includes(userId);
+
+    res.json({
+      isLiked,
+      likesCount: image.likes.length
+    });
+
+  } catch (error) {
+    console.error('Get like status error:', error);
+    res.status(500).json({ error: 'Failed to get like status' });
   }
 });
 

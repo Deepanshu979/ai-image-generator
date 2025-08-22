@@ -4,7 +4,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import Toast from '../components/ui/toast';
-import { Download, Eye, Upload } from 'lucide-react';
+import { Download, Eye, Upload, Heart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const initialImages = [];
@@ -540,6 +540,46 @@ const GeneratePage = () => {
                       className="absolute bottom-2 right-2 flex gap-2 z-10 items-center"
                       onClick={e => e.stopPropagation()}
                     >
+                      {/* Like Button - First Position */}
+                      <span className="relative">
+                        <Heart
+                          className={`w-5 h-5 cursor-pointer transition-colors ${
+                            imgObj.likes?.includes(localStorage.getItem('userId')) 
+                              ? 'text-red-500 fill-current' 
+                              : 'text-white hover:text-red-400'
+                          }`}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/${imgObj._id}/like`, {
+                                method: 'POST',
+                                headers: {
+                                  Authorization: `Bearer ${localStorage.getItem('token')}`,
+                                },
+                              });
+                              if (res.ok) {
+                                const data = await res.json();
+                                // Update the local state to reflect the like change
+                                setImages(prevImages => 
+                                  prevImages.map(img => 
+                                    img._id === imgObj._id 
+                                      ? { 
+                                          ...img, 
+                                          likes: data.isLiked 
+                                            ? [...(img.likes || []), localStorage.getItem('userId')]
+                                            : (img.likes || []).filter(id => id !== localStorage.getItem('userId'))
+                                        }
+                                      : img
+                                  )
+                                );
+                              }
+                            } catch (error) {
+                              console.error('Failed to like/unlike image:', error);
+                            }
+                          }}
+                        />
+                      </span>
+                      
                       <span className="relative">
                         <Download
                           className={`w-5 h-5 text-white hover:text-blue-400 cursor-pointer ${downloadingId === imgObj._id ? 'opacity-50 pointer-events-none' : ''}`}
