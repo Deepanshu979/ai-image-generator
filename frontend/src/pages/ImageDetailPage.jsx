@@ -252,14 +252,14 @@ const ImageDetailPage = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex w-full grow bg-[#101923] p-6 gap-6 justify-center">
+        <div className="flex w-full grow bg-[#101923] p-6 gap-8 justify-center">
           {/* Left Column - Image and Details */}
           <div className="flex flex-col flex-1 max-w-4xl">
             {/* Image Display */}
-            <div className="max-w-3xl max-h-[28rem] rounded-xl overflow-hidden mb-8 bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] border border-[#3a4750] shadow-2xl">
-              <div className="relative group h-full">
+            <div className="w-full max-w-4xl rounded-xl overflow-hidden mb-4 bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] border border-[#3a4750] shadow-2xl">
+              <div className="relative group">
                 {isGenerating ? (
-                  <div className="flex items-center justify-center bg-[#101923] p-12 h-full">
+                  <div className="flex items-center justify-center bg-[#101923] p-8 min-h-[500px]">
                     <div className="text-center">
                       <svg className="animate-spin h-12 w-12 text-blue-400 mx-auto mb-4" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -270,11 +270,11 @@ const ImageDetailPage = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="flex justify-center items-center p-6 h-full">
+                    <div className="flex justify-center items-center p-1">
                       <img
                         src={image?.imageUrl}
                         alt={image?.prompt || 'Generated image'}
-                        className="w-full h-full object-contain rounded-lg shadow-lg transition-transform duration-300 group-hover:scale-[1.02] cursor-zoom-in"
+                        className="max-w-full max-h-[600px] w-auto h-auto object-contain rounded-lg shadow-lg transition-transform duration-300 group-hover:scale-[1.02] cursor-zoom-in"
                         onError={(e) => {
                           e.target.style.display = 'none';
                           e.target.nextSibling.style.display = 'flex';
@@ -307,8 +307,9 @@ const ImageDetailPage = () => {
                       </div>
                     </div>
 
+                    {/* Fallback for image load errors */}
                     <div 
-                      className="hidden items-center justify-center text-[#9badc0] p-12"
+                      className="hidden items-center justify-center text-[#9badc0] p-12 min-h-[500px]"
                       style={{ display: 'none' }}
                     >
                       <div className="text-center">
@@ -427,8 +428,36 @@ const ImageDetailPage = () => {
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-4 py-2">
               <div className="flex items-center justify-center gap-2 px-3 py-2">
-                <div className="text-[#9badc0]">
-                  <Heart className="w-6 h-6" />
+                <div 
+                  className={`cursor-pointer transition-colors ${
+                    image?.likes?.includes(localStorage.getItem('userId')) 
+                      ? 'text-red-500' 
+                      : 'text-[#9badc0] hover:text-red-400'
+                  }`}
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/images/${image._id}/like`, {
+                        method: 'POST',
+                        headers: {
+                          Authorization: `Bearer ${localStorage.getItem('token')}`,
+                        },
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        // Update the local state to reflect the like change
+                        setImage(prev => ({
+                          ...prev,
+                          likes: data.isLiked 
+                            ? [...(prev.likes || []), localStorage.getItem('userId')]
+                            : (prev.likes || []).filter(id => id !== localStorage.getItem('userId'))
+                        }));
+                      }
+                    } catch (error) {
+                      console.error('Failed to like/unlike image:', error);
+                    }
+                  }}
+                >
+                  <Heart className={`w-6 h-6 ${image?.likes?.includes(localStorage.getItem('userId')) ? 'fill-current' : ''}`} />
                 </div>
               </div>
               <div className="flex items-center justify-center gap-2 px-3 py-2">
