@@ -478,33 +478,53 @@ const ImageDetailPage = () => {
                   className="text-[#9badc0] cursor-pointer hover:text-white transition-colors"
                   onClick={async () => {
                     try {
-                      // Create share data
+                      // First, download the image to get the blob
+                      const response = await fetch(image.imageUrl);
+                      const blob = await response.blob();
+                      
+                      // Create a file from the blob
+                      const promptPart = (image.prompt || 'image').replace(/\s+/g, '-').substring(0, 10);
+                      const datePart = image.createdAt ? new Date(image.createdAt).toISOString().split('T')[0] : '';
+                      const filename = `${promptPart}-${datePart}-${image._id}.jpg`;
+                      const file = new File([blob], filename, { type: blob.type });
+
+                      // Create share data with the actual image file
                       const shareData = {
                         title: image.title || 'AI Generated Image',
                         text: image.prompt || 'Check out this amazing AI-generated image!',
-                        url: `${window.location.origin}/image/${image._id}`,
-                        image: image.imageUrl
+                        files: [file]
                       };
 
-                      // Try native sharing first (mobile)
+                      // Try native sharing with file (mobile)
                       if (navigator.share && navigator.canShare(shareData)) {
                         await navigator.share(shareData);
                       } else {
-                        // Fallback: copy link to clipboard
-                        await navigator.clipboard.writeText(`${window.location.origin}/image/${image._id}`);
+                        // Fallback: download the image
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
                         
-                        // Show success message (you can implement a toast here)
-                        alert('Image link copied to clipboard!');
+                        alert('Image downloaded! You can now share it from your device.');
                       }
                     } catch (error) {
                       console.error('Failed to share image:', error);
-                      // Fallback: copy link to clipboard
+                      // Fallback: try to download directly
                       try {
-                        await navigator.clipboard.writeText(`${window.location.origin}/image/${image._id}`);
-                        alert('Image link copied to clipboard!');
-                      } catch (clipboardError) {
-                        console.error('Failed to copy to clipboard:', clipboardError);
-                        alert('Failed to share image');
+                        const a = document.createElement('a');
+                        a.href = image.imageUrl;
+                        a.download = `image-${image._id}.jpg`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        alert('Image downloaded! You can now share it from your device.');
+                      } catch (downloadError) {
+                        console.error('Failed to download image:', downloadError);
+                        alert('Failed to share image. Please try downloading it manually.');
                       }
                     }
                   }}
