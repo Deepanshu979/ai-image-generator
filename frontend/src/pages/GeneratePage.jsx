@@ -4,7 +4,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import Toast from '../components/ui/toast';
-import { Download, Eye, Upload, Heart } from 'lucide-react';
+import { Download, Eye, Upload, Heart, Share } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const initialImages = [];
@@ -546,7 +546,7 @@ const GeneratePage = () => {
                           className={`w-5 h-5 cursor-pointer transition-colors ${
                             imgObj.likes?.includes(localStorage.getItem('userId')) 
                               ? 'text-red-500 fill-current' 
-                              : 'text-white hover:text-red-400'
+                              : 'text-white hover:text-blue-400'
                           }`}
                           onClick={async (e) => {
                             e.stopPropagation();
@@ -575,6 +575,46 @@ const GeneratePage = () => {
                               }
                             } catch (error) {
                               console.error('Failed to like/unlike image:', error);
+                            }
+                          }}
+                        />
+                      </span>
+                      
+                      {/* Share Button - Second Position */}
+                      <span className="relative">
+                        <Share
+                          className="w-5 h-5 text-white hover:text-blue-400 cursor-pointer transition-colors"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              // Create share data
+                              const shareData = {
+                                title: imgObj.title || 'AI Generated Image',
+                                text: imgObj.prompt || 'Check out this amazing AI-generated image!',
+                                url: `${window.location.origin}/image/${imgObj._id}`,
+                                image: imgObj.imageUrl
+                              };
+
+                              // Try native sharing first (mobile)
+                              if (navigator.share && navigator.canShare(shareData)) {
+                                await navigator.share(shareData);
+                              } else {
+                                // Fallback: copy link to clipboard
+                                await navigator.clipboard.writeText(`${window.location.origin}/image/${imgObj._id}`);
+                                
+                                // Show success message (you can implement a toast here)
+                                alert('Image link copied to clipboard!');
+                              }
+                            } catch (error) {
+                              console.error('Failed to share image:', error);
+                              // Fallback: copy link to clipboard
+                              try {
+                                await navigator.clipboard.writeText(`${window.location.origin}/image/${imgObj._id}`);
+                                alert('Image link copied to clipboard!');
+                              } catch (clipboardError) {
+                                console.error('Failed to copy to clipboard:', clipboardError);
+                                alert('Failed to share image');
+                              }
                             }
                           }}
                         />

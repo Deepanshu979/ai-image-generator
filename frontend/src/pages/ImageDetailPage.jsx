@@ -474,7 +474,41 @@ const ImageDetailPage = () => {
                 </div>
               </div>
               <div className="flex items-center justify-center gap-2 px-3 py-2">
-                <div className="text-[#9badc0]">
+                <div 
+                  className="text-[#9badc0] cursor-pointer hover:text-white transition-colors"
+                  onClick={async () => {
+                    try {
+                      // Create share data
+                      const shareData = {
+                        title: image.title || 'AI Generated Image',
+                        text: image.prompt || 'Check out this amazing AI-generated image!',
+                        url: `${window.location.origin}/image/${image._id}`,
+                        image: image.imageUrl
+                      };
+
+                      // Try native sharing first (mobile)
+                      if (navigator.share && navigator.canShare(shareData)) {
+                        await navigator.share(shareData);
+                      } else {
+                        // Fallback: copy link to clipboard
+                        await navigator.clipboard.writeText(`${window.location.origin}/image/${image._id}`);
+                        
+                        // Show success message (you can implement a toast here)
+                        alert('Image link copied to clipboard!');
+                      }
+                    } catch (error) {
+                      console.error('Failed to share image:', error);
+                      // Fallback: copy link to clipboard
+                      try {
+                        await navigator.clipboard.writeText(`${window.location.origin}/image/${image._id}`);
+                        alert('Image link copied to clipboard!');
+                      } catch (clipboardError) {
+                        console.error('Failed to copy to clipboard:', clipboardError);
+                        alert('Failed to share image');
+                      }
+                    }
+                  }}
+                >
                   <Share className="w-6 h-6" />
                 </div>
               </div>
