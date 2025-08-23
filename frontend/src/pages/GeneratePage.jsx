@@ -587,33 +587,53 @@ const GeneratePage = () => {
                           onClick={async (e) => {
                             e.stopPropagation();
                             try {
-                              // Create share data
+                              // First, download the image to get the blob
+                              const response = await fetch(imgObj.imageUrl);
+                              const blob = await response.blob();
+                              
+                              // Create a file from the blob
+                              const promptPart = (imgObj.prompt || 'image').replace(/\s+/g, '-').substring(0, 10);
+                              const datePart = imgObj.createdAt ? new Date(imgObj.createdAt).toISOString().split('T')[0] : '';
+                              const filename = `${promptPart}-${datePart}-${imgObj._id}.jpg`;
+                              const file = new File([blob], filename, { type: blob.type });
+
+                              // Create share data with the actual image file
                               const shareData = {
                                 title: imgObj.title || 'AI Generated Image',
                                 text: imgObj.prompt || 'Check out this amazing AI-generated image!',
-                                url: `${window.location.origin}/image/${imgObj._id}`,
-                                image: imgObj.imageUrl
+                                files: [file]
                               };
 
-                              // Try native sharing first (mobile)
+                              // Try native sharing with file (mobile)
                               if (navigator.share && navigator.canShare(shareData)) {
                                 await navigator.share(shareData);
                               } else {
-                                // Fallback: copy link to clipboard
-                                await navigator.clipboard.writeText(`${window.location.origin}/image/${imgObj._id}`);
+                                // Fallback: download the image
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = filename;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                window.URL.revokeObjectURL(url);
                                 
-                                // Show success message (you can implement a toast here)
-                                alert('Image link copied to clipboard!');
+                                alert('Image downloaded! You can now share it from your device.');
                               }
                             } catch (error) {
                               console.error('Failed to share image:', error);
-                              // Fallback: copy link to clipboard
+                              // Fallback: try to download directly
                               try {
-                                await navigator.clipboard.writeText(`${window.location.origin}/image/${imgObj._id}`);
-                                alert('Image link copied to clipboard!');
-                              } catch (clipboardError) {
-                                console.error('Failed to copy to clipboard:', clipboardError);
-                                alert('Failed to share image');
+                                const a = document.createElement('a');
+                                a.href = imgObj.imageUrl;
+                                a.download = `image-${imgObj._id}.jpg`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                alert('Image downloaded! You can now share it from your device.');
+                              } catch (downloadError) {
+                                console.error('Failed to download image:', downloadError);
+                                alert('Failed to share image. Please try downloading it manually.');
                               }
                             }
                           }}
