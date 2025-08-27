@@ -299,6 +299,39 @@ router.get('/user/:userId', auth, async (req, res) => {
   }
 });
 
+// NEW: Get images liked by the authenticated user
+router.get('/liked', auth, async (req, res) => {
+  try {
+    const { page = 1, limit = 20, model, status } = req.query;
+
+    const query = { likes: req.user._id };
+    if (model) query.model = model;
+    if (status) query.status = status;
+
+    const images = await Image.find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .populate('user', 'username');
+
+    const total = await Image.countDocuments(query);
+
+    res.json({
+      images,
+      pagination: {
+        page: page * 1,
+        limit: limit * 1,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Get liked images error:', error);
+    res.status(500).json({ error: 'Failed to get liked images' });
+  }
+});
+
 // Like/unlike an image
 router.post('/:id/like', auth, async (req, res) => {
   try {

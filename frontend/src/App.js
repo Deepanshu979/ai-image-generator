@@ -10,6 +10,7 @@ import FeaturesPage from './pages/FeaturesPage';
 import PricingPage from './pages/PricingPage';
 import ContactPage from './pages/ContactPage';
 import ProfilePage from './pages/ProfilePage';
+import LikedPhotosPage from './pages/LikedPhotosPage';
 
 function App() {
   return (
@@ -38,6 +39,14 @@ function App() {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route
+          path="/liked"
+          element={
+            <RequireAuth>
+              <LikedPhotosPage />
+            </RequireAuth>
+          }
+        />
       </Routes>
     </Router>
   );

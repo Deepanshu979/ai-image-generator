@@ -126,6 +126,15 @@ const Navbar = () => {
                   Profile
                 </button>
                 <button
+                  className="block w-full text-left px-4 py-2 text-white hover:bg-[#283039]"
+                  onMouseDown={() => {
+                    setShowDropdown(false);
+                    navigate('/liked');
+                  }}
+                >
+                  Liked Photos
+                </button>
+                <button
                   className="block w-full text-left px-4 py-2 text-white hover:bg-[#283039] rounded-b-lg"
                   onMouseDown={handleAuthAction}
                 >
