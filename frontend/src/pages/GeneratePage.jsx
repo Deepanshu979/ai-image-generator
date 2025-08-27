@@ -370,6 +370,8 @@ const GeneratePage = () => {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-[#101923] overflow-x-hidden" style={{ fontFamily: 'Spline Sans, Noto Sans, sans-serif' }}>
+      <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-[#0c7ff2]/10 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/3 -right-32 h-80 w-80 rounded-full bg-[#61dafb]/10 blur-3xl" />
       <Navbar />
       <Toast message={error} show={showToast} onClose={() => setShowToast(false)} type="error" />
       <div className="layout-container flex h-full grow flex-col">

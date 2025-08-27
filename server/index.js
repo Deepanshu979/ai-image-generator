@@ -10,6 +10,7 @@ const authRoutes = require('./routes/auth');
 const imageRoutes = require('./routes/images');
 const videoRoutes = require('./routes/videos');
 const projectRoutes = require('./routes/projects');
+const contactRoutes = require('./routes/contact');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -50,6 +51,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

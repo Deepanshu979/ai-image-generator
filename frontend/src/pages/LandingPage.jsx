@@ -167,7 +167,9 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="bg-[#101923] min-h-screen flex flex-col">
+    <div className="bg-[#101923] min-h-screen flex flex-col relative overflow-x-hidden" style={{ fontFamily: 'Spline Sans, Noto Sans, sans-serif' }}>
+      <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-[#0c7ff2]/10 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/3 -right-32 h-80 w-80 rounded-full bg-[#61dafb]/10 blur-3xl" />
       <Navbar />
       {/* Hero Section */}
       <section className="px-2 sm:px-4 md:px-10 lg:px-40 flex flex-1 justify-center py-3 md:py-5">
