@@ -2,8 +2,27 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
 
 const router = express.Router();
+
+// Configure Cloudinary (relies on env vars)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Multer memory storage for avatar uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
+  }
+});
 
 // Register new user
 router.post('/register', async (req, res) => {
@@ -186,6 +205,36 @@ router.put('/profile', auth, async (req, res) => {
       return res.status(400).json({ error: message });
     }
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// Upload/Update avatar
+router.post('/profile/avatar', auth, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No avatar file provided' });
+
+    // Upload to Cloudinary
+    const uploadResult = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'avatars', resource_type: 'image', transformation: [{ width: 256, height: 256, crop: 'fill', gravity: 'face' }] },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      );
+      stream.end(req.file.buffer);
+    });
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { avatar: uploadResult.secure_url },
+      { new: true, select: '-password' }
+    );
+
+    return res.json({ message: 'Avatar updated', user });
+  } catch (error) {
+    console.error('Avatar upload error:', error);
+    return res.status(500).json({ error: 'Failed to update avatar' });
   }
 });
 
