@@ -4,6 +4,9 @@ const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const GitHubStrategy = require('passport-github2').Strategy;
 
 const router = express.Router();
 
@@ -23,6 +26,92 @@ const upload = multer({
     else cb(new Error('Only image files are allowed'));
   }
 });
+
+// Passport strategies
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+async function findOrCreateOAuthUser({ provider, providerId, email, username, avatar }) {
+  let user = null;
+  if (email) {
+    user = await User.findOne({ email: email.toLowerCase() });
+  }
+  if (!user) {
+    user = await User.findOne({ username: (username || `${provider}_${providerId}`).toLowerCase() });
+  }
+  if (!user) {
+    user = new User({
+      username: (username || `${provider}_${providerId}`).toLowerCase(),
+      email: (email || `${provider}_${providerId}@example.com`).toLowerCase(),
+      password: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+      avatar: avatar || ''
+    });
+    await user.save();
+  }
+  return user;
+}
+
+const hasGoogle = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+const hasGitHub = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+
+if (hasGoogle) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: '/api/auth/google/callback'
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      const email = profile.emails?.[0]?.value;
+      const username = profile.displayName || profile.name?.givenName || profile.name?.familyName || profile.id;
+      const avatar = profile.photos?.[0]?.value;
+      const user = await findOrCreateOAuthUser({ provider: 'google', providerId: profile.id, email, username, avatar });
+      return done(null, user);
+    } catch (err) {
+      return done(err);
+    }
+  }));
+}
+
+if (hasGitHub) {
+  passport.use(new GitHubStrategy({
+    clientID: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    callbackURL: '/api/auth/github/callback'
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      const email = profile.emails?.[0]?.value; // may be undefined if private
+      const username = profile.username || profile.displayName || profile.id;
+      const avatar = profile.photos?.[0]?.value;
+      const user = await findOrCreateOAuthUser({ provider: 'github', providerId: profile.id, email, username, avatar });
+      return done(null, user);
+    } catch (err) {
+      return done(err);
+    }
+  }));
+}
+
+function issueTokenAndRedirect(req, res) {
+  const user = req.user;
+  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  const redirectUrl = `${FRONTEND_URL}/login?token=${encodeURIComponent(token)}&uid=${encodeURIComponent(user._id.toString())}`;
+  return res.redirect(redirectUrl);
+}
+
+// OAuth routes (guarded)
+if (hasGoogle) {
+  router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+  router.get('/google/callback', passport.authenticate('google', { session: false, failureRedirect: '/login' }), issueTokenAndRedirect);
+} else {
+  router.get('/google', (req, res) => res.status(503).json({ error: 'Google OAuth not configured' }));
+  router.get('/google/callback', (req, res) => res.status(503).json({ error: 'Google OAuth not configured' }));
+}
+
+if (hasGitHub) {
+  router.get('/github', passport.authenticate('github', { scope: ['user:email'] }));
+  router.get('/github/callback', passport.authenticate('github', { session: false, failureRedirect: '/login' }), issueTokenAndRedirect);
+} else {
+  router.get('/github', (req, res) => res.status(503).json({ error: 'GitHub OAuth not configured' }));
+  router.get('/github/callback', (req, res) => res.status(503).json({ error: 'GitHub OAuth not configured' }));
+}
 
 // Register new user
 router.post('/register', async (req, res) => {
