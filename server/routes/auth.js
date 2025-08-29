@@ -7,6 +7,7 @@ const cloudinary = require('cloudinary').v2;
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const GitHubStrategy = require('passport-github2').Strategy;
+const fetch = require('node-fetch');
 
 const router = express.Router();
 
@@ -29,23 +30,82 @@ const upload = multer({
 
 // Passport strategies
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const GOOGLE_CALLBACK_URL = process.env.GOOGLE_REDIRECT_URI || '/api/auth/google/callback';
+const GITHUB_CALLBACK_URL = process.env.GITHUB_REDIRECT_URI || '/api/auth/github/callback';
 
 async function findOrCreateOAuthUser({ provider, providerId, email, username, avatar }) {
+  console.log('OAuth user lookup:', { provider, providerId, email, username, avatar });
+  
   let user = null;
+  
+  // First, try to find by email (most reliable)
   if (email) {
     user = await User.findOne({ email: email.toLowerCase() });
+    console.log('Found user by email:', user ? { id: user._id, username: user.username, email: user.email } : 'Not found');
   }
+  
+  // If no user found by email, create a new user
   if (!user) {
-    user = await User.findOne({ username: (username || `${provider}_${providerId}`).toLowerCase() });
-  }
-  if (!user) {
+    console.log('Creating new OAuth user');
+    
+    // Generate a unique username
+    let baseUsername = (username || `${provider}_${providerId}`).toLowerCase().replace(/\s+/g, '');
+    let uniqueUsername = baseUsername;
+    let counter = 1;
+    
+    // Check if username exists and generate a unique one
+    while (await User.findOne({ username: uniqueUsername })) {
+      uniqueUsername = `${baseUsername}${counter}`;
+      counter++;
+    }
+    
     user = new User({
-      username: (username || `${provider}_${providerId}`).toLowerCase(),
+      username: uniqueUsername,
       email: (email || `${provider}_${providerId}@example.com`).toLowerCase(),
       password: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
       avatar: avatar || ''
     });
     await user.save();
+    console.log('New OAuth user created:', { id: user._id, username: user.username, email: user.email });
+  } else {
+    // Update existing user with latest OAuth information
+    console.log('Updating existing OAuth user');
+    const updates = {};
+    
+    // Update username if different (case-insensitive comparison) and not conflicting
+    if (username && user.username.toLowerCase() !== username.toLowerCase()) {
+      // Check if the new username is available
+      const existingUserWithUsername = await User.findOne({ 
+        username: username.toLowerCase(),
+        _id: { $ne: user._id } // Exclude current user
+      });
+      
+      if (!existingUserWithUsername) {
+        updates.username = username.toLowerCase();
+        console.log('Updating username from', user.username, 'to', username.toLowerCase());
+      } else {
+        console.log('Username', username.toLowerCase(), 'already taken, keeping current username:', user.username);
+      }
+    }
+    
+    // Update email if different (shouldn't happen but just in case)
+    if (email && user.email.toLowerCase() !== email.toLowerCase()) {
+      updates.email = email.toLowerCase();
+      console.log('Updating email from', user.email, 'to', email.toLowerCase());
+    }
+    
+    // Update avatar if different
+    if (avatar && user.avatar !== avatar) {
+      updates.avatar = avatar;
+      console.log('Updating avatar from', user.avatar, 'to', avatar);
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      user = await User.findByIdAndUpdate(user._id, updates, { new: true });
+      console.log('OAuth user updated:', { id: user._id, username: user.username, email: user.email, avatar: user.avatar });
+    } else {
+      console.log('No updates needed for OAuth user');
+    }
   }
   return user;
 }
@@ -57,12 +117,31 @@ if (hasGoogle) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: '/api/auth/google/callback'
+    callbackURL: GOOGLE_CALLBACK_URL
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       const email = profile.emails?.[0]?.value;
       const username = profile.displayName || profile.name?.givenName || profile.name?.familyName || profile.id;
-      const avatar = profile.photos?.[0]?.value;
+      let avatar = profile.photos?.[0]?.value;
+      
+      // Fix Google avatar URL to get higher resolution and remove size restrictions
+      if (avatar && avatar.includes('googleusercontent.com')) {
+        // Remove size parameters and get original size
+        avatar = avatar.replace(/=s\d+-c$/, '');
+        avatar = avatar.replace(/=s\d+$/, '');
+        // Add size parameter for better compatibility
+        avatar = avatar + '=s400-c';
+        console.log('Google avatar URL processed:', avatar);
+      }
+      
+      console.log('Google profile data:', {
+        id: profile.id,
+        email,
+        username,
+        avatar,
+        photos: profile.photos?.map(p => p.value)
+      });
+      
       const user = await findOrCreateOAuthUser({ provider: 'google', providerId: profile.id, email, username, avatar });
       return done(null, user);
     } catch (err) {
@@ -75,7 +154,7 @@ if (hasGitHub) {
   passport.use(new GitHubStrategy({
     clientID: process.env.GITHUB_CLIENT_ID,
     clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    callbackURL: '/api/auth/github/callback'
+    callbackURL: GITHUB_CALLBACK_URL
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       const email = profile.emails?.[0]?.value; // may be undefined if private
@@ -91,6 +170,12 @@ if (hasGitHub) {
 
 function issueTokenAndRedirect(req, res) {
   const user = req.user;
+  console.log('OAuth login successful for user:', {
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    avatar: user.avatar
+  });
   const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
   const redirectUrl = `${FRONTEND_URL}/login?token=${encodeURIComponent(token)}&uid=${encodeURIComponent(user._id.toString())}`;
   return res.redirect(redirectUrl);
@@ -294,6 +379,38 @@ router.put('/profile', auth, async (req, res) => {
       return res.status(400).json({ error: message });
     }
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// Proxy avatar image to handle CORS issues
+router.get('/profile/avatar-proxy', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: 'URL parameter required' });
+    
+    console.log('Avatar proxy called with URL:', url);
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error('Failed to fetch image, status:', response.status);
+      throw new Error(`Failed to fetch image: ${response.status}`);
+    }
+    
+    const buffer = await response.arrayBuffer();
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    
+    console.log('Avatar proxy successful, content-type:', contentType, 'size:', buffer.byteLength);
+    
+    // Set CORS headers to allow cross-origin requests
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error('Avatar proxy error:', error);
+    res.status(500).json({ error: 'Failed to proxy avatar' });
   }
 });
 

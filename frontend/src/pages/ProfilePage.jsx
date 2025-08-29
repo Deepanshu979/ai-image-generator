@@ -25,11 +25,26 @@ const ProfilePage = () => {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || 'Failed to load profile');
+        
+        console.log('Profile data received:', data.user); // Debug log
+        console.log('Avatar URL:', data.user?.avatar); // Debug avatar URL
+        
         setUser(data.user);
         setName(data.user?.username || data.user?.name || '');
         setEmail(data.user?.email || '');
-        setAvatarPreview(data.user?.avatar || '');
+        
+        // Use proxy for Google avatars to avoid CORS issues
+        let avatarUrl = data.user?.avatar || '';
+        console.log('Original avatar URL:', avatarUrl);
+        
+        if (avatarUrl && avatarUrl.includes('googleusercontent.com')) {
+          avatarUrl = `${process.env.REACT_APP_API_URL}/api/auth/profile/avatar-proxy?url=${encodeURIComponent(avatarUrl)}`;
+          console.log('Proxied avatar URL:', avatarUrl);
+        }
+        setAvatarPreview(avatarUrl);
+        console.log('Avatar preview state set to:', avatarUrl);
       } catch (err) {
+        console.error('Profile fetch error:', err); // Debug log
         setError(err.message);
       } finally {
         setLoading(false);
@@ -45,6 +60,11 @@ const ProfilePage = () => {
     }
   }, [success]);
 
+  // Debug avatar preview changes
+  useEffect(() => {
+    console.log('Avatar preview changed to:', avatarPreview);
+  }, [avatarPreview]);
+
   const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
@@ -57,7 +77,7 @@ const ProfilePage = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ name })
+        body: JSON.stringify({ username: name })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Failed to update profile');
@@ -123,14 +143,33 @@ const ProfilePage = () => {
           {/* Profile header card */}
           <div className="rounded-2xl bg-[#121b25] border border-[#223042] p-6">
             <div className="flex items-center gap-4">
-              {/* Avatar preview */}
-              <div className="relative">
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="Avatar" className="w-16 h-16 rounded-full object-cover border border-[#223042]" />
-                ) : (
-                  <Avatar username={name || 'User'} size={64} />
-                )}
-              </div>
+                             {/* Avatar preview */}
+               <div className="relative">
+                 {avatarPreview ? (
+                   <img 
+                     src={avatarPreview} 
+                     alt="Avatar" 
+                     className="w-16 h-16 rounded-full object-cover border border-[#223042]"
+                     onError={(e) => {
+                       console.log('Avatar image failed to load:', avatarPreview);
+                       console.log('Error details:', e.target.error);
+                       e.target.style.display = 'none';
+                       e.target.nextSibling.style.display = 'block';
+                     }}
+                     onLoad={(e) => {
+                       console.log('Avatar image loaded successfully:', avatarPreview);
+                       // Hide the fallback avatar when image loads successfully
+                       e.target.nextSibling.style.display = 'none';
+                     }}
+                     crossOrigin="anonymous"
+                   />
+                 ) : null}
+                 <Avatar 
+                   username={name || 'User'} 
+                   size={64} 
+                   style={{ display: avatarPreview ? 'none' : 'block' }}
+                 />
+               </div>
               <div>
                 <div className="text-white text-xl font-semibold flex items-center gap-2">
                   <User className="w-5 h-5 text-[#84c1ff]" /> {name || '—'}
